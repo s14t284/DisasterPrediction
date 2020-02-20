@@ -1,0 +1,17 @@
+{
+  "features": [
+    "reply",
+    "url",
+    "hashtag",
+    "kaomoji",
+    "emoji",
+    "number",
+    "mecabbow"
+  ],
+  "params": {
+    "random_state": 0
+  },
+  "model_name": "svm",
+  "target_name": "flg",
+  "ID_name": "id"
+}
