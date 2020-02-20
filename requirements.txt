@@ -1,0 +1,11 @@
+numpy
+pandas
+sklearn
+xgboost
+lightgbm
+jupyterlab
+emoji
+nagisa
+neologdn
+feather-format
+tqdm
