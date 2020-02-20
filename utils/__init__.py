@@ -17,9 +17,9 @@ def feature_extractor(features, target: str = "train"):
             if target == "train":
                 CV.fit(texts[f.capitalize()].values)
             bow = CV.transform(texts[f.capitalize()].values)
-            dfs.append(bow.toarray())
+            dfs.append(bow.toarray().astype(np.float32))
         else:
-            dfs.append(pd.read_feather(f"features/feather/{f}_{target}.ftr").to_numpy())
+            dfs.append(pd.read_feather(f"features/feather/{f}_{target}.ftr").to_numpy().astype(np.float32))
     return dfs
 
 

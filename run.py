@@ -42,7 +42,7 @@ models = []
 
 params = config["params"]
 
-kf = KFold(n_splits=10, random_state=RANDOM_STATE)
+kf = KFold(n_splits=10, shuffle=True, random_state=RANDOM_STATE)
 
 for train_idx, val_idx in tqdm(kf.split(X_train_all)):
     X_train, X_valid = X_train_all[train_idx, :], X_train_all[val_idx, :]
@@ -57,7 +57,6 @@ for train_idx, val_idx in tqdm(kf.split(X_train_all)):
     )
     fmeasures.append(f1)
     y_preds.append(y_pred)
-    models.append(model)
 
 f1score = sum(fmeasures) / len(fmeasures)
 print("=== CV scores ===")
@@ -76,4 +75,4 @@ _, y_pred, true_model = train_and_predict(
 logger.info("save predicted result")
 sub = pd.DataFrame()
 sub[target_name] = y_pred
-sub.to_csv("./data/output/sub_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, ""), index=False)
+sub.to_csv("./data/output/sub_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, f1score), index=False)

@@ -9,3 +9,4 @@ nagisa
 neologdn
 feather-format
 tqdm
+mecab-python3

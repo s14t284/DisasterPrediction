@@ -9,9 +9,16 @@
     "mecabbow"
   ],
   "params": {
-    "random_state": 0
+    "random_state": 0,
+    "subsample": 0.8,
+    "max_bin": 300,
+    "num_leaves": 40,
+    "learning_rate": 0.01,
+    "max_depth": 7,
+    "colsample_bytree": 0.4,
+    "class_weight": "balanced"
   },
-  "model_name": "svm",
+  "model_name": "lgbm",
   "target_name": "flg",
   "ID_name": "id"
 }
