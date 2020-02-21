@@ -1,20 +1,15 @@
 {
   "features": [
-    "reply",
     "url",
+    "reply",
     "hashtag",
-    "kaomoji",
     "emoji",
     "number",
     "length",
-    "punctuation",
-    "date_representation",
-    "keyword",
     "mecabbow",
-    "mwordcount",
-    "muniquecount",
-    "mstopcount",
-    "mmeanlen"
+    "mmeanlen",
+    "punctuation",
+    "date_representation"
   ],
   "params": {
     "random_state": 0,

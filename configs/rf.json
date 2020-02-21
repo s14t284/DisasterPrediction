@@ -17,18 +17,10 @@
     "mmeanlen"
   ],
   "params": {
-    "random_state": 0,
-    "subsample": 0.7,
-    "max_bin": 300,
-    "num_leaves": 30,
-    "learning_rate": 0.05,
-    "max_depth": 8,
-    "colsample_bytree": 0.7,
-    "class_weight": "balanced",
-    "reg_alpha": 1,
-    "reg_lambda": 1
+    "random_state": 0
   },
-  "model_name": "lgbm",
+  "dim_reduc": false,
+  "model_name": "rf",
   "target_name": "flg",
   "ID_name": "id"
 }

@@ -127,6 +127,6 @@ dmypy.json
 **/*.csv
 .vscode/
 env/
-**/*.log
+logs/*
 **/*.ftr
 !**/.gitkeep

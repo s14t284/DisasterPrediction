@@ -7,6 +7,14 @@ from sklearn.model_selection import KFold
 from utils import load_datasets, load_target, train_and_predict
 from tqdm import tqdm
 from scipy.sparse import coo_matrix
+import matplotlib.pyplot as plt
+
+
+def str_func(x):
+    return "bow" if "bow" in x else x[:3]
+
+
+plt.rcParams["font.size"] = 6
 
 
 parser = argparse.ArgumentParser()
@@ -32,17 +40,20 @@ logger.info(features)
 target_name = config["target_name"]
 
 logger.info("load datasets")
-X_train_all, X_test = load_datasets(features)
+X_train_all, X_test, dims = load_datasets(
+    features, config["dim_reduc"] if "dim_reduc" in config else True
+)
+
+indexes = [f"{str_func(k)}{i}" for k, v in dims.items() for i in range(v)]
 y_train_all = load_target(target_name)
 logger.info(X_train_all.shape)
 
 fmeasures = []
 y_preds = []
-models = []
 
 params = config["params"]
 
-kf = KFold(n_splits=10, shuffle=True, random_state=RANDOM_STATE)
+kf = KFold(n_splits=2, shuffle=True, random_state=RANDOM_STATE)
 
 for train_idx, val_idx in tqdm(kf.split(X_train_all)):
     X_train, X_valid = X_train_all[train_idx, :], X_train_all[val_idx, :]
@@ -72,7 +83,19 @@ _, y_pred, true_model = train_and_predict(
     X_train_all, X_test, y_train_all, params=params, model_name=config["model_name"]
 )
 
+importance = pd.DataFrame(
+    true_model.feature_importances_, index=indexes, columns=["importance"]
+)
+importance = importance.sort_values("importance", ascending=False)
+importance.head(50).plot.bar()
+plt.savefig("logs/sub_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
+plt.close()
+logger.info(importance)
+print(importance)
+
 logger.info("save predicted result")
 sub = pd.DataFrame()
 sub[target_name] = y_pred
-sub.to_csv("./data/output/sub_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, f1score), index=False)
+sub.to_csv(
+    "./data/output/sub_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, f1score), index=False
+)
