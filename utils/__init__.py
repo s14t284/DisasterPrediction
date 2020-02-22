@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+from tqdm import tqdm
 
 
 with open("data/slothlib.txt", "r") as f:
@@ -14,8 +15,10 @@ CTFIDF = TfidfVectorizer(
     sublinear_tf=True, analyzer="char", ngram_range=(1, 4), max_features=50000,
 )
 KCV = CountVectorizer()
-SVD = TruncatedSVD(1000)
+SVD = TruncatedSVD(100)
+CSVD = TruncatedSVD(200)
 SCL = StandardScaler()
+CSCL = StandardScaler()
 
 
 def extract_word_vector(feature, target: str, dim_reduc: bool = False):
@@ -26,38 +29,47 @@ def extract_word_vector(feature, target: str, dim_reduc: bool = False):
         CTFIDF.fit(corpus)
     bow = TFIDF.transform(corpus).toarray().astype(np.float32)
     boc = CTFIDF.transform(corpus).toarray().astype(np.float32)
-    bow = np.hstack((bow, boc))
     if dim_reduc:
         if target == "train":
             SVD.fit(bow)
+            CSVD.fit(boc)
         bow_svd = SVD.transform(bow)
+        boc_svd = CSVD.transform(boc)
         if target == "train":
             SCL.fit(bow_svd)
+            CSCL.fit(boc_svd)
         bow_scl = SCL.transform(bow_svd)
-        return bow_scl
-    return bow
+        boc_scl = CSCL.transform(boc_svd)
+        del bow
+        del boc
+        del bow_svd
+        del boc_svd
+        return np.concatenate((bow_scl, boc_scl), axis=1)
+    return np.concatenate((bow, boc), axis=1)
 
 
 def feature_extractor(features, target: str = "train", dim_reduc: bool = False):
     dfs = []
     dims = {}
-    for f in features:
-        if "bow" in f:
-            bow = extract_word_vector(f, target, dim_reduc)
-            dfs.append(bow)
-        elif "keyword" in f:
-            keywords = pd.read_feather(f"features/feather/{f}_{target}.ftr")
-            if target == "train":
-                KCV.fit(keywords[f.capitalize()].values)
-            kbow = KCV.transform(keywords[f.capitalize()].values)
-            dfs.append(kbow.toarray().astype(np.float32))
-        else:
-            dfs.append(
-                pd.read_feather(f"features/feather/{f}_{target}.ftr")
-                .to_numpy()
-                .astype(np.float32)
-            )
-        dims[f] = dfs[-1].shape[1]
+    with tqdm(features) as ftqdm:
+        for f in ftqdm:
+            ftqdm.set_postfix(processing_feature=f)
+            if "bow" in f:
+                bow = extract_word_vector(f, target, dim_reduc)
+                dfs.append(bow)
+            elif "keyword" in f:
+                keywords = pd.read_feather(f"features/feather/{f}_{target}.ftr")
+                if target == "train":
+                    KCV.fit(keywords[f.capitalize()].values)
+                kbow = KCV.transform(keywords[f.capitalize()].values)
+                dfs.append(kbow.toarray().astype(np.float32))
+            else:
+                dfs.append(
+                    pd.read_feather(f"features/feather/{f}_{target}.ftr")
+                    .to_numpy()
+                    .astype(np.float32)
+                )
+            dims[f] = dfs[-1].shape[1]
     return dfs, dims
 
 

@@ -22,21 +22,96 @@ url = re.compile(RESTRDIC["url"])
 hashtag = re.compile(RESTRDIC["hashtag"])
 kaomoji = re.compile(RESTRDIC["kaomoji"])
 number = re.compile(RESTRDIC["number"])
+with open("data/japanese_prefectures.txt") as f:
+    PREF = [line[:-1] for line in f.readlines()]
+with open("data/japanese_regions.txt") as f:
+    REGION = [line[:-1] for line in f.readlines()]
+with open("data/japanese_capitals.txt") as f:
+    CAPITAL = [line[:-1] for line in f.readlines()]
+with open("data/roma_prefectures.txt") as f:
+    RPREF = [line[:-1] for line in f.readlines()]
+with open("data/roma_capitals.txt") as f:
+    RCAPITAL = [line[:-1] for line in f.readlines()]
+PLACECLUES = ["都", "市", "県", "市", "町", "区", "府", "村", "都市", "地方", "地域", "圏", "地区"]
+JAPANCLUES = ["日本", "japan"]
 
 
-def in_reply(text: str):
+def count_prefecture_name(location: str):
+    cnt = 0
+    for p in PREF:
+        if p in location:
+            cnt += 1
+    return cnt
+
+
+def count_region_name(location: str):
+    cnt = 0
+    for p in REGION:
+        if p in location:
+            cnt += 1
+    return cnt
+
+
+def count_capital_name(location: str):
+    cnt = 0
+    for p in CAPITAL:
+        if p in location:
+            cnt += 1
+    return cnt
+
+
+def in_eng(location: str):
+    return len(re.findall(r"[A-Za-z]", location)) > 0
+
+
+def count_roma_prefecture_name(location: str):
+    cnt = 0
+    l = location.lower()
+    for p in RPREF:
+        if p in l:
+            cnt += 1
+    return cnt
+
+
+def count_roma_capital_name(location: str):
+    cnt = 0
+    l = location.lower()
+    for p in RCAPITAL:
+        if p in l:
+            cnt += 1
+    return cnt
+
+
+def count_place_clues(location: str):
+    cnt = 0
+    for p in PLACECLUES:
+        if p in location:
+            cnt += 1
+    return cnt
+
+
+def count_japan_clues(location: str):
+    cnt = 0
+    l = location.lower()
+    for p in JAPANCLUES:
+        if p in l:
+            cnt += 1
+    return cnt
+
+
+def count_reply(text: str):
     return len([c for c in text if c == "@"])
 
 
-def in_url(text: str):
+def count_url(text: str):
     return len(url.findall(text))
 
 
-def in_hashtag(text: str):
+def count_hashtag(text: str):
     return len(hashtag.findall(text))
 
 
-def in_emoji(text: str):
+def count_emoji(text: str):
     return len([c for c in text if c in emoji.UNICODE_EMOJI])
 
 
@@ -50,11 +125,11 @@ def replace_emoji(text: str):
     return replaced_text
 
 
-def in_kaomoji(text: str):
+def count_kaomoji(text: str):
     return len(kaomoji.findall(text))
 
 
-def in_number(text: str):
+def count_number(text: str):
     return len(number.findall(text))
 
 

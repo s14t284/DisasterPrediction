@@ -7,12 +7,20 @@ import neologdn
 
 from base import AbstructFeature, get_arguments, generate_features
 from healper import (
-    in_emoji,
-    in_hashtag,
-    in_kaomoji,
-    in_number,
-    in_url,
-    in_reply,
+    count_prefecture_name,
+    count_region_name,
+    count_capital_name,
+    in_eng,
+    count_roma_prefecture_name,
+    count_roma_capital_name,
+    count_place_clues,
+    count_japan_clues,
+    count_emoji,
+    count_hashtag,
+    count_kaomoji,
+    count_number,
+    count_url,
+    count_reply,
     count_date_representation,
     RESTRDIC,
     replace_emoji,
@@ -24,7 +32,13 @@ from healper import (
 AbstructFeature.DIR = "features/feather"
 with open("./data/slothlib.txt") as f:
     STOPWORDS = [line.replace("\n", "") for line in f.readlines()]
+
+
 tagger = MeCab.Tagger("")
+
+
+def get_num_from_rank(i: int, rank: int):
+    return str(i)[rank]
 
 
 class Keyword(AbstructFeature):
@@ -33,50 +47,168 @@ class Keyword(AbstructFeature):
         self._test["Keyword"] = test["keyword"]
 
 
+class Prefecture(AbstructFeature):
+    def create_features(self):
+        train["location"] = train.fillna({"location": "nan"})["location"]
+        test["location"] = test.fillna({"location": "nan"})["location"]
+        self._train["Prefecture"] = train["location"].apply(count_prefecture_name)
+        self._test["Prefecture"] = test["location"].apply(count_prefecture_name)
+
+
+class Region(AbstructFeature):
+    def create_features(self):
+        self._train["Region"] = train["location"].apply(count_region_name)
+        self._test["Region"] = test["location"].apply(count_region_name)
+
+
+class Capital(AbstructFeature):
+    def create_features(self):
+        self._train["Capital"] = train["location"].apply(count_capital_name)
+        self._test["Capital"] = test["location"].apply(count_capital_name)
+
+
+class Lineng(AbstructFeature):
+    def create_features(self):
+        self._train["Lineng"] = train["location"].apply(in_eng)
+        self._test["Lineng"] = test["location"].apply(in_eng)
+
+
+class Rprefecture(AbstructFeature):
+    def create_features(self):
+        self._train["Rprefecture"] = train["location"].apply(count_roma_prefecture_name)
+        self._test["Rprefecture"] = test["location"].apply(count_roma_prefecture_name)
+
+
+class Rcapital(AbstructFeature):
+    def create_features(self):
+        self._train["Rcapital"] = train["location"].apply(count_roma_capital_name)
+        self._test["Rcapital"] = test["location"].apply(count_roma_capital_name)
+
+
+class Placeclues(AbstructFeature):
+    def create_features(self):
+        self._train["Placeclues"] = train["location"].apply(count_place_clues)
+        self._test["Placeclues"] = test["location"].apply(count_place_clues)
+
+
+class Japanclues(AbstructFeature):
+    def create_features(self):
+        self._train["Japanclues"] = train["location"].apply(count_japan_clues)
+        self._test["Japanclues"] = test["location"].apply(count_japan_clues)
+
+
+class Id(AbstructFeature):
+    def create_features(self):
+        self._train["Id"] = (train.id - train.id.mean()) / (
+            train.id.max() - train.id.min()
+        )
+        self._test["Id"] = (test.id - test.id.mean()) / (test.id.max() - test.id.min())
+
+
+class Id1(AbstructFeature):
+    """idの1の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id1"] = train["id"].apply(lambda x: get_num_from_rank(x, 4))
+        self._test["Id1"] = test["id"].apply(lambda x: get_num_from_rank(x, 4))
+
+
+class Id10(AbstructFeature):
+    """idの10の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id10"] = train["id"].apply(lambda x: get_num_from_rank(x, 3))
+        self._test["Id10"] = test["id"].apply(lambda x: get_num_from_rank(x, 3))
+
+
+class Id100(AbstructFeature):
+    """idの100の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id100"] = train["id"].apply(lambda x: get_num_from_rank(x, 2))
+        self._test["Id100"] = test["id"].apply(lambda x: get_num_from_rank(x, 2))
+
+
+class Id1000(AbstructFeature):
+    """idの1000の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id1000"] = train["id"].apply(lambda x: get_num_from_rank(x, 1))
+        self._test["Id1000"] = test["id"].apply(lambda x: get_num_from_rank(x, 1))
+
+
+class Id10000(AbstructFeature):
+    """idの10000の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id10000"] = train["id"].apply(lambda x: get_num_from_rank(x, 0))
+        self._test["Id10000"] = test["id"].apply(lambda x: get_num_from_rank(x, 0))
+
+
 class Reply(AbstructFeature):
     def create_features(self):
-        self._train["Reply"] = train["text"].apply(in_reply) * 1
-        self._test["Reply"] = test["text"].apply(in_reply) * 1
+        self._train["Reply"] = train["text"].apply(count_reply)
+        self._test["Reply"] = test["text"].apply(count_reply)
         train["text"] = train["text"].apply(replace_reply)
         test["text"] = test["text"].apply(replace_reply)
 
 
 class URL(AbstructFeature):
     def create_features(self):
-        self._train["URL"] = train["text"].apply(in_url) * 1
-        self._test["URL"] = test["text"].apply(in_url) * 1
+        self._train["URL"] = train["text"].apply(count_url)
+        self._test["URL"] = test["text"].apply(count_url)
         train["text"] = train["text"].replace(RESTRDIC["url"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["url"], "", regex=True)
 
 
 class Hashtag(AbstructFeature):
     def create_features(self):
-        self._train["Hashtag"] = train["text"].apply(in_hashtag) * 1
-        self._test["Hashtag"] = test["text"].apply(in_hashtag) * 1
+        self._train["Hashtag"] = train["text"].apply(count_hashtag)
+        self._test["Hashtag"] = test["text"].apply(count_hashtag)
         train["text"] = train["text"].replace(RESTRDIC["hashtag"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["hashtag"], "", regex=True)
 
 
 class Kaomoji(AbstructFeature):
     def create_features(self):
-        self._train["Kaomoji"] = train["text"].apply(in_kaomoji) * 1
-        self._test["Kaomoji"] = test["text"].apply(in_kaomoji) * 1
+        self._train["Kaomoji"] = train["text"].apply(count_kaomoji)
+        self._test["Kaomoji"] = test["text"].apply(count_kaomoji)
         train["text"] = train["text"].replace(RESTRDIC["kaomoji"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["kaomoji"], "", regex=True)
 
 
 class Emoji(AbstructFeature):
     def create_features(self):
-        self._train["Emoji"] = train["text"].apply(in_emoji) * 1
-        self._test["Emoji"] = test["text"].apply(in_emoji) * 1
+        self._train["Emoji"] = train["text"].apply(count_emoji)
+        self._test["Emoji"] = test["text"].apply(count_emoji)
         train["text"] = train["text"].apply(replace_emoji)
         test["text"] = test["text"].apply(replace_emoji)
 
 
 class Number(AbstructFeature):
     def create_features(self):
-        self._train["Number"] = train["text"].apply(in_number) * 1
-        self._test["Number"] = test["text"].apply(in_number) * 1
+        self._train["Number"] = train["text"].apply(count_number)
+        self._test["Number"] = test["text"].apply(count_number)
         train["text"] = train["text"].replace(RESTRDIC["number"], "0", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["number"], "0", regex=True)
 

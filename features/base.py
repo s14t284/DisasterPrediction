@@ -29,15 +29,15 @@ def get_features(namespace: dict):
 
 def generate_features(namespace: dict, isOverwrite: bool = False):
     for feature in get_features(namespace):
-        feature.run().save()
-        # if (
-        #     not isOverwrite
-        #     and feature.train_path.exists()
-        #     and feature.test_path.exists()
-        # ):
-        #     print(f"Generating `{feature.name}` feature was skipped.")
-        # else:
-        #    feature.run().save()
+        # feature.run().save()
+        if (
+            not isOverwrite
+            and feature.train_path.exists()
+            and feature.test_path.exists()
+        ):
+            print(f"Generating `{feature.name}` feature was skipped.")
+        else:
+            feature.run().save()
 
 
 @contextmanager
