@@ -11,3 +11,4 @@ feather-format
 tqdm
 mecab-python3
 optuna
+matplotlib

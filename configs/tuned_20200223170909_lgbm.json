@@ -48,16 +48,15 @@
     "mmeanlen"
   ],
   "params": {
-    "random_state": 0,
-    "subsample": 0.7,
-    "max_bin": 300,
-    "num_leaves": 30,
-    "learning_rate": 0.05,
-    "max_depth": 8,
-    "colsample_bytree": 0.7,
+    "num_leaves": 133,
+    "learning_rate": 0.09449661648951005,
     "class_weight": "balanced",
-    "reg_alpha": 1,
-    "reg_lambda": 1
+    "min_child_samples": 45,
+    "subsample": 0.8870002344914154,
+    "subsample_freq": 4,
+    "colsample_bytree": 0.7489946745586353,
+    "reg_alpha": 1.4618544810570921,
+    "reg_lambda": 0.09655071018883365
   },
   "model_name": "lgbm",
   "target_name": "flg",

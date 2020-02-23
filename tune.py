@@ -16,10 +16,10 @@ from utils import ModelSelector, load_datasets, load_target, train_and_predict
 
 
 def str_func(x):
-    return "bow" if "bow" in x else x[:3]
+    return "bow" if "bow" in x else x
 
 
-plt.rcParams["font.size"] = 6
+plt.rcParams["font.size"] = 5
 
 
 parser = argparse.ArgumentParser()
@@ -52,7 +52,12 @@ X_train_all, X_test, dims = load_datasets(
     features, config["dim_reduc"] if "dim_reduc" in config else True
 )
 
-indexes = [f"{str_func(k)}{i}" for k, v in dims.items() for i in range(v)]
+indexes = [
+    f"{str_func(k)}{i}" if v > 1 else str_func(k)
+    for k, v in dims.items()
+    for i in range(v)
+]
+
 y_train_all = load_target(target_name)
 logger.info(X_train_all.shape)
 
@@ -113,7 +118,8 @@ logger.info(f"best score: {str(best_score)}")
 json_name = "tuned_{0:%Y%m%d%H%M%S}_{1}.json".format(now, config["model_name"])
 logger.info(f"save best params to `configs/{json_name}`")
 with open(f"./configs/{json_name}", "w") as f:
-    config["params"] = params
+    for k, v in params.items():
+        config["params"][k] = v
     json.dump(config, f)
 
 _, y_pred, true_model = train_and_predict(

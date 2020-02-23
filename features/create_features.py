@@ -1,33 +1,35 @@
-import pandas as pd
-import numpy as np
-import re
-import MeCab
 import os
-import neologdn
+import re
+import string
+import unicodedata
+from typing import List, Union
 
-from base import AbstructFeature, get_arguments, generate_features
+import MeCab
+import neologdn
+import pandas as pd
+
+from base import AbstructFeature, generate_features, get_arguments
 from healper import (
-    count_prefecture_name,
-    count_region_name,
+    RESTRDIC,
     count_capital_name,
-    in_eng,
-    count_roma_prefecture_name,
-    count_roma_capital_name,
-    count_place_clues,
-    count_japan_clues,
+    count_date_representation,
     count_emoji,
     count_hashtag,
+    count_japan_clues,
     count_kaomoji,
     count_number,
-    count_url,
+    count_place_clues,
+    count_prefecture_name,
+    count_region_name,
     count_reply,
-    count_date_representation,
-    RESTRDIC,
+    count_roma_capital_name,
+    count_roma_prefecture_name,
+    count_url,
+    in_eng,
+    load_csv_for_train_to_df,
     replace_emoji,
     replace_reply,
-    load_csv_for_train_to_df,
 )
-
 
 AbstructFeature.DIR = "features/feather"
 with open("./data/slothlib.txt") as f:
@@ -37,14 +39,31 @@ with open("./data/slothlib.txt") as f:
 tagger = MeCab.Tagger("")
 
 
-def get_num_from_rank(i: int, rank: int):
-    return str(i)[rank]
+def get_num_from_rank(i: int, rank: Union[int, List[int]]):
+    if isinstance(rank, int):
+        return str(i)[rank]
+    elif isinstance(rank, list):
+        if len(rank) > 1:
+            return str(i)[rank[0] : rank[1] + 1]
+        else:
+            return str(i)[rank[0]]
 
 
 class Keyword(AbstructFeature):
     def create_features(self):
         self._train["Keyword"] = train["keyword"]
         self._test["Keyword"] = test["keyword"]
+
+
+class CountKeyword(AbstructFeature):
+    def create_features(self):
+        count_keyword_dict = train["keyword"].value_counts().to_dict()
+        self._train["Count_keyword"] = train["keyword"].apply(
+            lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
+        )
+        self._test["Count_keyword"] = test["keyword"].apply(
+            lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
+        )
 
 
 class Prefecture(AbstructFeature):
@@ -115,6 +134,8 @@ class Id1(AbstructFeature):
     def create_features(self):
         self._train["Id1"] = train["id"].apply(lambda x: get_num_from_rank(x, 4))
         self._test["Id1"] = test["id"].apply(lambda x: get_num_from_rank(x, 4))
+        train["Id1"] = self._train["Id1"]
+        test["Id1"] = self._test["Id1"]
 
 
 class Id10(AbstructFeature):
@@ -127,6 +148,8 @@ class Id10(AbstructFeature):
     def create_features(self):
         self._train["Id10"] = train["id"].apply(lambda x: get_num_from_rank(x, 3))
         self._test["Id10"] = test["id"].apply(lambda x: get_num_from_rank(x, 3))
+        train["Id10"] = self._train["Id10"]
+        test["Id10"] = self._test["Id10"]
 
 
 class Id100(AbstructFeature):
@@ -139,6 +162,8 @@ class Id100(AbstructFeature):
     def create_features(self):
         self._train["Id100"] = train["id"].apply(lambda x: get_num_from_rank(x, 2))
         self._test["Id100"] = test["id"].apply(lambda x: get_num_from_rank(x, 2))
+        train["Id100"] = self._train["Id100"]
+        test["Id100"] = self._test["Id100"]
 
 
 class Id1000(AbstructFeature):
@@ -151,6 +176,8 @@ class Id1000(AbstructFeature):
     def create_features(self):
         self._train["Id1000"] = train["id"].apply(lambda x: get_num_from_rank(x, 1))
         self._test["Id1000"] = test["id"].apply(lambda x: get_num_from_rank(x, 1))
+        train["Id1000"] = self._train["Id1000"]
+        test["Id1000"] = self._test["Id1000"]
 
 
 class Id10000(AbstructFeature):
@@ -163,6 +190,231 @@ class Id10000(AbstructFeature):
     def create_features(self):
         self._train["Id10000"] = train["id"].apply(lambda x: get_num_from_rank(x, 0))
         self._test["Id10000"] = test["id"].apply(lambda x: get_num_from_rank(x, 0))
+        train["Id10000"] = self._train["Id10000"]
+        test["Id10000"] = self._test["Id10000"]
+
+
+class Id10_1(AbstructFeature):
+    """idの10の位と1の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id10_1"] = train["id"].apply(
+            lambda x: get_num_from_rank(x, [3, 4])
+        )
+        self._test["Id10_1"] = test["id"].apply(lambda x: get_num_from_rank(x, [3, 4]))
+        train["Id10_1"] = self._train["Id10_1"]
+        test["Id10_1"] = self._test["Id10_1"]
+
+
+class Id100_10(AbstructFeature):
+    """idの100の位と10の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id100_10"] = train["id"].apply(
+            lambda x: get_num_from_rank(x, [2, 3])
+        )
+        self._test["Id100_10"] = test["id"].apply(
+            lambda x: get_num_from_rank(x, [2, 3])
+        )
+        train["Id100_10"] = self._train["Id100_10"]
+        test["Id100_10"] = self._test["Id100_10"]
+
+
+class Id1000_100(AbstructFeature):
+    """idの1000の位と100の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id1000_100"] = train["id"].apply(
+            lambda x: get_num_from_rank(x, [1, 2])
+        )
+        self._test["Id1000_100"] = test["id"].apply(
+            lambda x: get_num_from_rank(x, [1, 2])
+        )
+        train["Id1000_100"] = self._train["Id1000_100"]
+        test["Id1000_100"] = self._test["Id1000_100"]
+
+
+class Id10000_1000(AbstructFeature):
+    """idの10000の位と1000の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Id10000_1000"] = train["id"].apply(
+            lambda x: get_num_from_rank(x, [0, 1])
+        )
+        self._test["Id10000_1000"] = test["id"].apply(
+            lambda x: get_num_from_rank(x, [0, 1])
+        )
+        train["Id10000_1000"] = self._train["Id10000_1000"]
+        test["Id10000_1000"] = self._test["Id10000_1000"]
+
+
+class CountId1(AbstructFeature):
+    """idの1の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id1"].value_counts().to_dict()
+        self._train["Count_id1"] = train["Id1"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id1"] = test["Id1"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId10(AbstructFeature):
+    """idの10の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id10"].value_counts().to_dict()
+        self._train["Count_id10"] = train["Id10"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id10"] = test["Id10"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId100(AbstructFeature):
+    """idの100の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id100"].value_counts().to_dict()
+        self._train["Count_id100"] = train["Id100"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id100"] = test["Id100"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId1000(AbstructFeature):
+    """idの1000の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id1000"].value_counts().to_dict()
+        self._train["Count_id1000"] = train["Id1000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id1000"] = test["Id1000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId10000(AbstructFeature):
+    """idの10000の位
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id10000"].value_counts().to_dict()
+        self._train["Count_id10000"] = train["Id10000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id10000"] = test["Id10000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId10_1(AbstructFeature):
+    """idの10の位と1の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id10_1"].value_counts().to_dict()
+        self._train["Count_id10_1"] = train["Id10_1"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id10_1"] = test["Id10_1"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId100_10(AbstructFeature):
+    """idの100の位と10の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id100_10"].value_counts().to_dict()
+        self._train["Count_id100_10"] = train["Id100_10"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id100_10"] = test["Id100_10"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId1000_100(AbstructFeature):
+    """idの1000の位と100の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id1000_100"].value_counts().to_dict()
+        self._train["Count_id1000_100"] = train["Id1000_100"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id1000_100"] = test["Id1000_100"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+
+
+class CountId10000_1000(AbstructFeature):
+    """idの10000の位と1000の位の出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_id_dict = train["Id10000_1000"].value_counts().to_dict()
+        self._train["Count_id10000_1000"] = train["Id10000_1000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
+        self._test["Count_id10000_1000"] = test["Id10000_1000"].apply(
+            lambda x: count_id_dict[x] if x in count_id_dict else 0
+        )
 
 
 class Reply(AbstructFeature):
@@ -238,7 +490,42 @@ class DateRepresentation(AbstructFeature):
         self._test["Length"] = test["text"].apply(count_date_representation)
 
 
+class Countexclamation(AbstructFeature):
+    def create_features(self):
+        self._train["Countexclamation"] = train["text"].apply(self.count_exclamation)
+        self._test["Countexclamation"] = test["text"].apply(self.count_exclamation)
+
+    @classmethod
+    def count_exclamation(cls, text: str):
+        text = neologdn.normalize(text)
+        return len(re.findall(r"!", text))
+
+
+class Countquestion(AbstructFeature):
+    def create_features(self):
+        self._train["Countquestion"] = train["text"].apply(self.count_question)
+        self._test["Countquestion"] = test["text"].apply(self.count_question)
+
+    @classmethod
+    def count_question(cls, text: str):
+        text = neologdn.normalize(text)
+        return len(re.findall(r"\?", text))
+
+
+class Countlaugh(AbstructFeature):
+    def create_features(self):
+        self._train["Countlaugh"] = train["text"].apply(self.count_laugh)
+        self._test["Countlaugh"] = test["text"].apply(self.count_laugh)
+
+    @classmethod
+    def count_laugh(cls, text: str):
+        text = neologdn.normalize(text)
+        return len(re.findall(r"\Ww", text))
+
+
 class Mecabbow(AbstructFeature):
+    ASCII_LOWERCASES = [c for c in "abcdefghijklmnopqrstuvwxyz"]
+
     def create_features(self):
         train["text"] = train["text"].apply(self.normalize)
         test["text"] = test["text"].apply(self.normalize)
@@ -251,7 +538,11 @@ class Mecabbow(AbstructFeature):
         node = node.next
         words = []
         while node.next:
-            if node.feature.split(",")[0] in ["名詞", "動詞", "形容詞", "副詞"]:
+            if (
+                node.feature.split(",")[0] in ["名詞", "動詞", "形容詞", "副詞"]
+                and len(node.surface) > 1
+                # and node.surface.lower() not in cls.ASCII_LOWERCASES
+            ):
                 words.append(node.surface)
             node = node.next
         return " ".join(words)
@@ -260,8 +551,10 @@ class Mecabbow(AbstructFeature):
     def normalize(cls, text):
         text = re.sub(r"\u3000", " ", text)
         new_text = neologdn.normalize(text, repeat=1)
-        new_text = re.sub(r"[【】『』「」\[\]\(\)（）［］\|｜]", " ", new_text)
-        new_text = new_text.lower()
+        new_text = re.sub(r"[【】『』「」\[\]\(\)（）［］\|｜<>＜＞《》\"\\\/!\?]+", " ", new_text)
+        new_text = unicodedata.normalize("NFKC", new_text.lower())
+        table = str.maketrans("", "", string.punctuation + "「」、。・※")
+        new_text = new_text.translate(table)
         return new_text
 
 

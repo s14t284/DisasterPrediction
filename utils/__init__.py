@@ -4,7 +4,6 @@ from .models import *
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
 
@@ -23,6 +22,7 @@ CSCL = StandardScaler()
 
 def extract_word_vector(feature, target: str, dim_reduc: bool = False):
     texts = pd.read_feather(f"features/feather/{feature}_{target}.ftr")
+    texts.to_csv("a.csv")
     corpus = texts[feature.capitalize()].values
     if target == "train":
         TFIDF.fit(corpus)
@@ -57,7 +57,7 @@ def feature_extractor(features, target: str = "train", dim_reduc: bool = False):
             if "bow" in f:
                 bow = extract_word_vector(f, target, dim_reduc)
                 dfs.append(bow)
-            elif "keyword" in f:
+            elif "keyword" == f:
                 keywords = pd.read_feather(f"features/feather/{f}_{target}.ftr")
                 if target == "train":
                     KCV.fit(keywords[f.capitalize()].values)

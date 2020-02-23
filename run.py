@@ -15,10 +15,10 @@ from utils import load_datasets, load_target, train_and_predict
 
 
 def str_func(x):
-    return "bow" if "bow" in x else x[:3]
+    return "bow" if "bow" in x else x
 
 
-plt.rcParams["font.size"] = 6
+plt.rcParams["font.size"] = 5
 
 
 parser = argparse.ArgumentParser()
@@ -50,7 +50,12 @@ X_train_all, X_test, dims = load_datasets(
     features, config["dim_reduc"] if "dim_reduc" in config else True
 )
 
-indexes = [f"{str_func(k)}{i}" for k, v in dims.items() for i in range(v)]
+indexes = [
+    f"{str_func(k)}{i}" if v > 1 else str_func(k)
+    for k, v in dims.items()
+    for i in range(v)
+]
+
 y_train_all = load_target(target_name)
 logger.info(X_train_all.shape)
 
