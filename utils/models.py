@@ -10,7 +10,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
     precision_score,
     recall_score,
-    classification_report
+    classification_report,
 )
 from xgboost import XGBClassifier
 import logging
@@ -142,7 +142,27 @@ class ModelSelector(object):
         return model, param_grids
 
     def _get_lightgbm(self):
-        # TODO: lightgbmのドキュメントを読んで，パラメータチューニングを行う対象を選択する
         model = LGBMClassifier
-        param_grids = {"n_estimators": 100}
+        param_grids = {
+            "boosting_type": "gbdt",
+            "num_leaves": [2, 256],
+            "max_depth": -1,
+            "learning_rate": [0.005, 0.1],
+            "n_estimators": 100,
+            "subsample_for_bin": 200000,
+            "objective": "binary",
+            "class_weight": ["balanced", None],
+            "min_split_gain": 0.0,
+            "min_child_weight": 0.001,
+            "min_child_samples": [5, 100],
+            "subsample": [0.4, 1.0],
+            "subsample_freq": [1, 7],
+            "colsample_bytree": [0.65, 1.0],
+            "reg_alpha": [1e-8, 10.0],
+            "reg_lambda": [1e-8, 10.0],
+            "random_state": 0,
+            "n_jobs": 2,
+            "silent": True,
+            "importance_type": "split",
+        }
         return model, param_grids
