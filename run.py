@@ -1,13 +1,17 @@
 import argparse
+import datetime as dt
 import json
 import logging
-import datetime as dt
-import pandas as pd
-from sklearn.model_selection import KFold
-from utils import load_datasets, load_target, train_and_predict
-from tqdm import tqdm
-from scipy.sparse import coo_matrix
+import random
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.sparse import csr_matrix
+from sklearn.model_selection import StratifiedKFold
+from tqdm import tqdm
+
+from utils import load_datasets, load_target, train_and_predict
 
 
 def str_func(x):
@@ -33,6 +37,8 @@ handler2 = logging.FileHandler(filename="./logs/sub_{0:%Y%m%d%H%M%S}.log".format
 logger.addHandler(handler2)
 IDNAME = config["ID_name"] if "ID_NAME" in config else "id"
 RANDOM_STATE = 0
+random.seed(RANDOM_STATE)
+np.random.seed(RANDOM_STATE)
 
 features = config["features"]
 logger.info(features)
@@ -53,14 +59,14 @@ y_preds = []
 
 params = config["params"]
 
-kf = KFold(n_splits=2, shuffle=True, random_state=RANDOM_STATE)
+kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
 
-for train_idx, val_idx in tqdm(kf.split(X_train_all)):
+for train_idx, val_idx in tqdm(kf.split(X_train_all, y_train_all)):
     X_train, X_valid = X_train_all[train_idx, :], X_train_all[val_idx, :]
     y_train, y_valid = y_train_all[train_idx], y_train_all[val_idx]
     f1, y_pred, model = train_and_predict(
-        coo_matrix(X_train),
-        coo_matrix(X_valid),
+        csr_matrix(X_train),
+        csr_matrix(X_valid),
         y_train,
         y_valid,
         params,
@@ -70,9 +76,6 @@ for train_idx, val_idx in tqdm(kf.split(X_train_all)):
     y_preds.append(y_pred)
 
 f1score = sum(fmeasures) / len(fmeasures)
-print("=== CV scores ===")
-print(fmeasures)
-print(f1score)
 logger.info("=== CV scores ===")
 logger.info(fmeasures)
 logger.info(f1score)
@@ -91,7 +94,6 @@ importance.head(50).plot.bar()
 plt.savefig("logs/sub_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
 plt.close()
 logger.info(importance)
-print(importance)
 
 logger.info("save predicted result")
 sub = pd.DataFrame()

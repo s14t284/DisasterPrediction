@@ -1,15 +1,18 @@
 import argparse
+import datetime as dt
 import json
 import logging
-import datetime as dt
-import pandas as pd
-from sklearn.model_selection import StratifiedKFold
-from utils import load_datasets, load_target, train_and_predict, ModelSelector
-from tqdm import tqdm
-from scipy.sparse import coo_matrix
-import matplotlib.pyplot as plt
-import optuna
+import random
 from distutils.util import strtobool
+
+import matplotlib.pyplot as plt
+import numpy as np
+import optuna
+import pandas as pd
+from scipy.sparse import csr_matrix
+from sklearn.model_selection import StratifiedKFold
+
+from utils import ModelSelector, load_datasets, load_target, train_and_predict
 
 
 def str_func(x):
@@ -32,10 +35,12 @@ handler1 = logging.StreamHandler()
 handler1.setLevel(logging.INFO)
 logger.addHandler(handler1)
 now = dt.datetime.now()
-handler2 = logging.FileHandler(filename="./logs/sub_{0:%Y%m%d%H%M%S}.log".format(now))
+handler2 = logging.FileHandler(filename="./logs/tune_{0:%Y%m%d%H%M%S}.log".format(now))
 logger.addHandler(handler2)
 IDNAME = config["ID_name"] if "ID_NAME" in config else "id"
 RANDOM_STATE = 0
+random.seed(RANDOM_STATE)
+np.random.seed(RANDOM_STATE)
 
 features = config["features"]
 logger.info(features)
@@ -80,12 +85,12 @@ def objective(trial: optuna.Trial):
     _, param_grids = ms.get_model()
     params = param_grids_to_params(trial, param_grids)
     kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=RANDOM_STATE)
-    for train_idx, val_idx in tqdm(kf.split(X_train_all, y_train_all)):
+    for train_idx, val_idx in kf.split(X_train_all, y_train_all):
         X_train, X_valid = X_train_all[train_idx, :], X_train_all[val_idx, :]
         y_train, y_valid = y_train_all[train_idx], y_train_all[val_idx]
         f1, _, _ = train_and_predict(
-            coo_matrix(X_train),
-            coo_matrix(X_valid),
+            csr_matrix(X_train),
+            csr_matrix(X_valid),
             y_train,
             y_valid,
             params,
@@ -120,14 +125,13 @@ importance = pd.DataFrame(
 )
 importance = importance.sort_values("importance", ascending=False)
 importance.head(50).plot.bar()
-plt.savefig("logs/sub_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
+plt.savefig("logs/tune_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
 plt.close()
 logger.info(importance)
-print(importance)
 
 logger.info("save predicted result")
 sub = pd.DataFrame()
 sub[target_name] = y_pred
 sub.to_csv(
-    "./data/output/sub_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, best_score), index=False
+    "./data/output/tune_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, best_score), index=False
 )
