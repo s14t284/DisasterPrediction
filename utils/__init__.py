@@ -34,7 +34,7 @@ def feature_extractor(features, target: str = "train"):
     with tqdm(features) as ftqdm:
         for f in ftqdm:
             ftqdm.set_postfix(processing_feature=f)
-            if "bow" in f or "boc" in f or "tfidf" in f or "svd" in f or "topic" in f:
+            if "bow" in f or "boc" in f or "tfidf" in f or "svd" in f or "pca" in f or "topic" in f or f in ["keyword", "nkeyword"]:
                 bow = extract_word_vector(f, target)
                 dfs.append(bow)
             elif "nkeyword" in f and "_" not in f:

@@ -11,7 +11,7 @@ import neologdn
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.decomposition import LatentDirichletAllocation as LDA, TruncatedSVD
+from sklearn.decomposition import LatentDirichletAllocation as LDA, TruncatedSVD, PCA
 from sklearn.preprocessing import StandardScaler
 
 from base import AbstructFeature, generate_features, get_arguments, is_AbstructFeature
@@ -75,8 +75,19 @@ def get_num_from_rank(i: int, rank: Union[int, List[int]]):
 
 class Keyword(AbstructFeature):
     def create_features(self):
-        self._train["Keyword"] = train["keyword"]
-        self._test["Keyword"] = test["keyword"]
+        CV = CountVectorizer()
+        train_keywords = train["keyword"].values.tolist()
+        test_keywords = test["keyword"].values.tolist()
+        corpus = train_keywords + test_keywords
+        CV.fit(corpus)
+        train_kbow = (
+            CV.transform(train_keywords).toarray().astype(np.float32)
+        )
+        train_kbow_list = train_kbow.tolist()
+        self._train["Keyword"] = vec_to_vecstrs(train_kbow_list)
+        test_kbow = CV.transform(test_keywords).toarray().astype(np.float32)
+        test_kbow_list = test_kbow.tolist()
+        self._test["Keyword"] = vec_to_vecstrs(test_kbow_list)
 
 
 class QueryKeywordNum(AbstructFeature):
@@ -142,16 +153,27 @@ class RatioAnsKeyword(AbstructFeature):
 
 class Nkeyword(AbstructFeature):
     def create_features(self):
+        train["nkeyword"] = train["keyword"].apply(self.replace_rule)
+        test["nkeyword"] = test["keyword"].apply(self.replace_rule)
         global TOPIC_KEYWORDS
-        self._train["Nkeyword"] = train["keyword"].apply(self.replace_rule)
-        self._test["Nkeyword"] = test["keyword"].apply(self.replace_rule)
-        train["nkeyword"] = self._train["Nkeyword"]
-        test["nkeyword"] = self._test["Nkeyword"]
         TOPIC_KEYWORDS = (
             train.nkeyword[train.nkeyword.apply(lambda x: len(x.split(" "))) == 1]
             .value_counts()
             .to_dict()
         )
+
+        CV = CountVectorizer()
+        train_keywords = train["nkeyword"].values.tolist()
+        test_keywords = test["nkeyword"].values.tolist()
+        corpus = train_keywords + test_keywords
+        CV.fit(corpus)
+        train_kbow = CV.transform(train_keywords).toarray().astype(np.float32)
+        train_kbow_list = train_kbow.tolist()
+        self._train["Nkeyword"] = vec_to_vecstrs(train_kbow_list)
+        test_kbow = CV.transform(test_keywords).toarray().astype(np.float32)
+        test_kbow_list = test_kbow.tolist()
+        self._test["Nkeyword"] = vec_to_vecstrs(test_kbow_list)
+
         train["topic_keyword"] = train.nkeyword.apply(self.decide_keyword)
         test["topic_keyword"] = test.nkeyword.apply(self.decide_keyword)
 
@@ -735,12 +757,11 @@ class Mecabbow(AbstructFeature):
     def create_features(self):
         train["text"] = train["text"].apply(self.normalize)
         test["text"] = test["text"].apply(self.normalize)
-        global CV
-        CV = CountVectorizer(stop_words=STOPWORDS, max_features=10000)
         train["mecab_text"] = train["text"].apply(self.parse)
         test["mecab_text"] = test["text"].apply(self.parse)
         global corpus_bow
-        corpus_bow = np.concatenate([train["mecab_text"].values, test["mecab_text"]])
+        corpus_bow = np.concatenate([train["mecab_text"].values, test["mecab_text"].values])
+        CV = CountVectorizer(stop_words=STOPWORDS, max_features=10000)
         CV.fit(corpus_bow)
         global train_bow
         train_bow = (
@@ -792,32 +813,6 @@ class Mecabwordtfidf(AbstructFeature):
         self._test["Mecabwordtfidf"] = vec_to_vecstrs(test_tfidf)
 
 
-class Mecabboc(AbstructFeature):
-    def create_features(self):
-        global corpus_bow
-        global CCV
-        CCV = CountVectorizer(max_features=50000, ngram_range=(1, 4), analyzer="char")
-        CCV.fit(corpus_bow)
-        global train_boc
-        train_boc = CCV.transform(train["mecab_text"].values).toarray().tolist()
-        self._train["Mecabboc"] = vec_to_vecstrs(train_boc)
-        global test_boc
-        test_boc = CCV.transform(test["mecab_text"].values).toarray().tolist()
-        self._test["Mecabbow"] = vec_to_vecstrs(test_boc)
-
-
-class Mecabchartfidf(AbstructFeature):
-    def create_features(self):
-        global train_boc
-        global test_boc
-        TFIDF = TfidfTransformer(sublinear_tf=True)
-        TFIDF.fit(np.concatenate([train_boc, test_boc]))
-        train_tfidf = TFIDF.transform(train_boc).toarray().tolist()
-        test_tfidf = TFIDF.transform(test_boc).toarray().tolist()
-        self._train["Mecabwordtfidf"] = vec_to_vecstrs(train_tfidf)
-        self._test["Mecabwordtfidf"] = vec_to_vecstrs(test_tfidf)
-
-
 class Mecabwordsvd100(AbstructFeature):
     DIMNUM = 100
     key = f"Mecabwordsvd{DIMNUM}"
@@ -831,8 +826,8 @@ class Mecabwordsvd100(AbstructFeature):
         train_svd = SVD.transform(train_bow)
         test_svd = SVD.transform(test_bow)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
 
@@ -850,8 +845,8 @@ class Mecabwordsvd200(AbstructFeature):
         train_svd = SVD.transform(train_bow)
         test_svd = SVD.transform(test_bow)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
 
@@ -869,10 +864,95 @@ class Mecabwordsvd300(AbstructFeature):
         train_svd = SVD.transform(train_bow)
         test_svd = SVD.transform(test_bow)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabwordpca100(AbstructFeature):
+    DIMNUM = 100
+    key = f"Mecabwordpca{DIMNUM}"
+
+    def create_features(self):
+        global train_bow
+        global test_bow
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_bow, test_bow]))
+        train_svd = pca.transform(train_bow)
+        test_svd = pca.transform(test_bow)
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabwordpca200(AbstructFeature):
+    DIMNUM = 200
+    key = f"Mecabwordpca{DIMNUM}"
+
+    def create_features(self):
+        global train_bow
+        global test_bow
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_bow, test_bow]))
+        train_svd = pca.transform(train_bow)
+        test_svd = pca.transform(test_bow)
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabwordpca300(AbstructFeature):
+    DIMNUM = 300
+    key = f"Mecabwordpca{DIMNUM}"
+
+    def create_features(self):
+        global train_bow
+        global test_bow
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_bow, test_bow]))
+        train_svd = pca.transform(train_bow)
+        test_svd = pca.transform(test_bow)
+        del train_bow
+        del test_bow
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabboc(AbstructFeature):
+    def create_features(self):
+        global corpus_bow
+        CCV = CountVectorizer(max_features=20000, ngram_range=(1, 3), analyzer="char")
+        CCV.fit(corpus_bow)
+        del corpus_bow
+        global train_boc
+        train_boc = CCV.transform(train["mecab_text"].values).toarray().tolist()
+        self._train["Mecabboc"] = vec_to_vecstrs(train_boc)
+        global test_boc
+        test_boc = CCV.transform(test["mecab_text"].values).toarray().tolist()
+        self._test["Mecabbow"] = vec_to_vecstrs(test_boc)
+
+
+class Mecabchartfidf(AbstructFeature):
+    def create_features(self):
+        global train_boc
+        global test_boc
+        TFIDF = TfidfTransformer(sublinear_tf=True)
+        TFIDF.fit(np.concatenate([train_boc, test_boc]))
+        train_tfidf = TFIDF.transform(train_boc).toarray().tolist()
+        test_tfidf = TFIDF.transform(test_boc).toarray().tolist()
+        self._train["Mecabchartfidf"] = vec_to_vecstrs(train_tfidf)
+        self._test["Mecabchartfidf"] = vec_to_vecstrs(test_tfidf)
 
 
 class Mecabcharsvd100(AbstructFeature):
@@ -888,8 +968,8 @@ class Mecabcharsvd100(AbstructFeature):
         train_svd = SVD.transform(train_boc)
         test_svd = SVD.transform(test_boc)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
 
@@ -907,8 +987,8 @@ class Mecabcharsvd200(AbstructFeature):
         train_svd = SVD.transform(train_boc)
         test_svd = SVD.transform(test_boc)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
 
@@ -926,8 +1006,67 @@ class Mecabcharsvd300(AbstructFeature):
         train_svd = SVD.transform(train_boc)
         test_svd = SVD.transform(test_boc)
         SCL.fit(np.concatenate([train_svd, test_svd]))
-        train_scl = SCL.transform(train).toarray().tolist()
-        test_scl = SCL.transform(test).toarray().tolist()
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabcharpca100(AbstructFeature):
+    DIMNUM = 100
+    key = f"Mecabcharpca{DIMNUM}"
+
+    def create_features(self):
+        global train_boc
+        global test_boc
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_boc, test_boc]))
+        train_svd = pca.transform(train_boc)
+        test_svd = pca.transform(test_boc)
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabcharpca200(AbstructFeature):
+    DIMNUM = 200
+    key = f"Mecabcharpca{DIMNUM}"
+
+    def create_features(self):
+        global train_boc
+        global test_boc
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_boc, test_boc]))
+        train_svd = pca.transform(train_boc)
+        test_svd = pca.transform(test_boc)
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
+        self._train[self.key] = vec_to_vecstrs(train_scl)
+        self._test[self.key] = vec_to_vecstrs(test_scl)
+
+
+class Mecabcharpca300(AbstructFeature):
+    DIMNUM = 300
+    key = f"Mecabcharpca{DIMNUM}"
+
+    def create_features(self):
+        global train_boc
+        global test_boc
+        pca = PCA(self.DIMNUM, random_state=RANDOM_STATE)
+        SCL = StandardScaler()
+        pca.fit(np.concatenate([train_boc, test_boc]))
+        train_svd = pca.transform(train_boc)
+        test_svd = pca.transform(test_boc)
+        del train_boc
+        del test_boc
+        SCL.fit(np.concatenate([train_svd, test_svd]))
+        train_scl = SCL.transform(train_svd).tolist()
+        test_scl = SCL.transform(test_svd).tolist()
         self._train[self.key] = vec_to_vecstrs(train_scl)
         self._test[self.key] = vec_to_vecstrs(test_scl)
 
@@ -1052,14 +1191,13 @@ class Keywordtopic5(AbstructFeature):
     """
 
     DIMNUM = 5
+    key = f"Keywordtopic{DIMNUM}"
 
     def create_features(self):
-        self._train["topic_keyword"] = train["topic_keyword"]
-        self._test["topic_keyword"] = test["topic_keyword"]
         topic_texts_pairs = defaultdict(list)
         for k in TOPIC_KEYWORDS.keys():
-            topic_texts_pairs[k] = train[train.topic_keyword == k].mecabbow.to_list()
-            topic_texts_pairs[k] += test[test.topic_keyword == k].mecabbow.to_list()
+            topic_texts_pairs[k] = train[train.topic_keyword == k].mecab_text.to_list()
+            topic_texts_pairs[k] += test[test.topic_keyword == k].mecab_text.to_list()
         cv = CountVectorizer(min_df=0.04, stop_words=STOPWORDS)
         lda = LDA(self.DIMNUM, random_state=RANDOM_STATE)
         corpus = [" ".join(v) for k, v in topic_texts_pairs.items()]
@@ -1071,12 +1209,14 @@ class Keywordtopic5(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            self._train.loc[
-                self._train.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            train.loc[
+                train.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
-            self._test.loc[
-                self._test.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            test.loc[
+                test.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
+        self._train[self.key] = train[self.key]
+        self._test[self.key] = test[self.key]
 
 
 class Keywordtopic10(AbstructFeature):
@@ -1087,14 +1227,13 @@ class Keywordtopic10(AbstructFeature):
     """
 
     DIMNUM = 10
+    key = f"Keywordtopic{DIMNUM}"
 
     def create_features(self):
-        self._train["topic_keyword"] = train["topic_keyword"]
-        self._test["topic_keyword"] = test["topic_keyword"]
         topic_texts_pairs = defaultdict(list)
         for k in TOPIC_KEYWORDS.keys():
-            topic_texts_pairs[k] = train[train.topic_keyword == k].mecabbow.to_list()
-            topic_texts_pairs[k] += test[test.topic_keyword == k].mecabbow.to_list()
+            topic_texts_pairs[k] = train[train.topic_keyword == k].mecab_text.to_list()
+            topic_texts_pairs[k] += test[test.topic_keyword == k].mecab_text.to_list()
         cv = CountVectorizer(min_df=0.04, stop_words=STOPWORDS)
         lda = LDA(self.DIMNUM, random_state=RANDOM_STATE)
         corpus = [" ".join(v) for k, v in topic_texts_pairs.items()]
@@ -1106,12 +1245,14 @@ class Keywordtopic10(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            self._train.loc[
-                self._train.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            train.loc[
+                train.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
-            self._test.loc[
-                self._test.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            test.loc[
+                test.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
+        self._train[self.key] = train[self.key]
+        self._test[self.key] = test[self.key]
 
 
 class Keywordtopic20(AbstructFeature):
@@ -1122,14 +1263,13 @@ class Keywordtopic20(AbstructFeature):
     """
 
     DIMNUM = 20
+    key = f"Keywordtopic{DIMNUM}"
 
     def create_features(self):
-        self._train["topic_keyword"] = train["topic_keyword"]
-        self._test["topic_keyword"] = test["topic_keyword"]
         topic_texts_pairs = defaultdict(list)
         for k in TOPIC_KEYWORDS.keys():
-            topic_texts_pairs[k] = train[train.topic_keyword == k].mecabbow.to_list()
-            topic_texts_pairs[k] += test[test.topic_keyword == k].mecabbow.to_list()
+            topic_texts_pairs[k] = train[train.topic_keyword == k].mecab_text.to_list()
+            topic_texts_pairs[k] += test[test.topic_keyword == k].mecab_text.to_list()
         cv = CountVectorizer(min_df=0.04, stop_words=STOPWORDS)
         lda = LDA(self.DIMNUM, random_state=RANDOM_STATE)
         corpus = [" ".join(v) for k, v in topic_texts_pairs.items()]
@@ -1141,12 +1281,14 @@ class Keywordtopic20(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            self._train.loc[
-                self._train.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            train.loc[
+                train.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
-            self._test.loc[
-                self._test.topic_keyword == k, f"Keywordtopic{self.DIMNUM}"
+            test.loc[
+                test.topic_keyword == k, self.key
             ] = " ".join(str_lda_vec_list[i])
+        self._train[self.key] = train[self.key]
+        self._test[self.key] = test[self.key]
 
 
 if __name__ == "__main__":
@@ -1166,5 +1308,4 @@ if __name__ == "__main__":
     variables = globals()
 
     variables = {k: v for k, v in variables.items() if is_AbstructFeature(v)}
-    print(variables)
     generate_features(variables, args.force)

@@ -33,7 +33,6 @@ def get_features(namespace: dict):
 
 def generate_features(namespace: dict, isOverwrite: bool = False):
     for feature in get_features(namespace):
-        # feature.run().save()
         if (
             not isOverwrite
             and feature.train_path.exists()
@@ -42,6 +41,7 @@ def generate_features(namespace: dict, isOverwrite: bool = False):
             print(f"Generating `{feature.name}` feature was skipped.")
         else:
             feature.run().save()
+            del feature
 
 
 @contextmanager
