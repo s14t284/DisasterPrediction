@@ -17,13 +17,17 @@ def get_arguments():
     return parser.parse_args()
 
 
+def is_AbstructFeature(v):
+    return (
+        inspect.isclass(v)
+        and issubclass(v, AbstructFeature)
+        and not inspect.isabstract(v)
+    )
+
+
 def get_features(namespace: dict):
     for k, v in namespace.items():
-        if (
-            inspect.isclass(v)
-            and issubclass(v, AbstructFeature)
-            and not inspect.isabstract(v)
-        ):
+        if is_AbstructFeature(v):
             yield v()
 
 
