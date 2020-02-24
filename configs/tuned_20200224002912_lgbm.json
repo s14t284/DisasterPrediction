@@ -1,9 +1,7 @@
 {
   "features": [
-    "nkeyword",
-    "count_nkeyword",
-    "query_nkeyword_num",
-    "ratio_ans_nkeyword",
+    "keyword",
+    "count_keyword",
     "prefecture",
     "region",
     "capital",

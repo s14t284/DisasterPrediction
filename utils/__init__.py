@@ -57,7 +57,7 @@ def feature_extractor(features, target: str = "train", dim_reduc: bool = False):
             if "bow" in f:
                 bow = extract_word_vector(f, target, dim_reduc)
                 dfs.append(bow)
-            elif "keyword" == f:
+            elif "keyword" in f and "_" not in f:
                 keywords = pd.read_feather(f"features/feather/{f}_{target}.ftr")
                 if target == "train":
                     KCV.fit(keywords[f.capitalize()].values)

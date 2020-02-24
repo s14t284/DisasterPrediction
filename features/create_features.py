@@ -2,6 +2,7 @@ import os
 import re
 import string
 import unicodedata
+from collections import defaultdict
 from typing import List, Union
 
 import MeCab
@@ -55,6 +56,22 @@ class Keyword(AbstructFeature):
         self._test["Keyword"] = test["keyword"]
 
 
+class QueryKeywordNum(AbstructFeature):
+    """
+    queryに用いて引っかかったkeywordの数
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Query_keyword_num"] = train["keyword"].apply(
+            lambda x: len(x.split(" "))
+        )
+        self._test["Query_keyword_num"] = test["keyword"].apply(
+            lambda x: len(x.split(" "))
+        )
+
+
 class CountKeyword(AbstructFeature):
     def create_features(self):
         count_keyword_dict = train["keyword"].value_counts().to_dict()
@@ -64,6 +81,127 @@ class CountKeyword(AbstructFeature):
         self._test["Count_keyword"] = test["keyword"].apply(
             lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
         )
+
+
+class RatioAnsKeyword(AbstructFeature):
+    """keywordが出現するときの正解割合
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_ans_ratio = self.calc_count_ans_ratio(train)
+        self._train["Ratio_ans_keyword"] = train["keyword"].apply(
+            lambda x: count_ans_ratio[x] if x in count_ans_ratio else 0
+        )
+        self._test["Ratio_ans_keyword"] = test["keyword"].apply(
+            lambda x: count_ans_ratio[x] if x in count_ans_ratio else 0
+        )
+
+    @classmethod
+    def calc_count_ans_ratio(cls, df):
+        keywords = df["keyword"].to_list()
+        count_keyword_with_flg = df.groupby("keyword").flg.value_counts().to_dict()
+        key_freq_store = {k: defaultdict(int) for k in keywords}
+        for k, v in count_keyword_with_flg.items():
+            key_freq_store[k[0]][k[1]] = v
+        key_ratio_store = {}
+        for k in keywords:
+            if 0 in key_freq_store[k] and 1 in key_freq_store[k]:
+                key_ratio_store[k] = key_freq_store[k][1] / (
+                    key_freq_store[k][0] + key_freq_store[k][1]
+                )
+            else:
+                key_ratio_store[k] = 0.0
+        return key_ratio_store
+
+
+class Nkeyword(AbstructFeature):
+    def create_features(self):
+        self._train["Nkeyword"] = train["keyword"].apply(self.replace_rule)
+        self._test["Nkeyword"] = test["keyword"].apply(self.replace_rule)
+        train["nkeyword"] = self._train["Nkeyword"]
+        test["nkeyword"] = self._test["Nkeyword"]
+
+    @classmethod
+    def replace_rule(cls, text: str):
+        words = text.split(" ")
+        for i in range(len(words)):
+            words[i] = re.sub(r"(する|した|の|犯|者|官|事態|証言)$", "", words[i])
+            words[i] = re.sub(r"\S+テロ", "テロ", words[i])
+            words[i] = re.sub(r"\S+雷", "雷", words[i])
+            words[i] = re.sub(r"\S+衝突", "衝突", words[i])
+            words[i] = re.sub(r"\S*殺人\S*", "殺人", words[i])
+        words = sorted(list(set(words)))
+        return " ".join(words)
+
+
+class QueryNkeywordNum(AbstructFeature):
+    """
+    queryに用いて引っかかった整形後のkeywordの数
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        self._train["Query_nkeyword_num"] = train["nkeyword"].apply(
+            lambda x: len(x.split(" "))
+        )
+        self._test["Query_nkeyword_num"] = test["nkeyword"].apply(
+            lambda x: len(x.split(" "))
+        )
+
+
+class CountNkeyword(AbstructFeature):
+    """整形後のkeywordの学習データ中での出現数
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_keyword_dict = train["nkeyword"].value_counts().to_dict()
+        self._train["Count_keyword"] = train["nkeyword"].apply(
+            lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
+        )
+        self._test["Count_keyword"] = test["nkeyword"].apply(
+            lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
+        )
+
+
+class RatioAnsNkeyword(AbstructFeature):
+    """整形後のkeywordが出現するときの正解割合
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    def create_features(self):
+        count_ans_ratio = self.calc_count_ans_ratio(train)
+        self._train["Ratio_ans_nkeyword"] = train["nkeyword"].apply(
+            lambda x: count_ans_ratio[x] if x in count_ans_ratio else 0
+        )
+        self._test["Ratio_ans_nkeyword"] = test["nkeyword"].apply(
+            lambda x: count_ans_ratio[x] if x in count_ans_ratio else 0
+        )
+
+    @classmethod
+    def calc_count_ans_ratio(cls, df):
+        keywords = df["nkeyword"].to_list()
+        count_keyword_with_flg = df.groupby("nkeyword").flg.value_counts().to_dict()
+        key_freq_store = {k: defaultdict(int) for k in keywords}
+        for k, v in count_keyword_with_flg.items():
+            key_freq_store[k[0]][k[1]] = v
+        key_ratio_store = {}
+        for k in keywords:
+            if 0 in key_freq_store[k] and 1 in key_freq_store[k]:
+                key_ratio_store[k] = key_freq_store[k][1] / (
+                    key_freq_store[k][0] + key_freq_store[k][1]
+                )
+            else:
+                key_ratio_store[k] = 0.0
+        return key_ratio_store
 
 
 class Prefecture(AbstructFeature):
