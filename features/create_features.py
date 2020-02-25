@@ -72,6 +72,12 @@ def get_num_from_rank(i: int, rank: Union[int, List[int]]):
         else:
             return str(i)[rank[0]]
 
+def scale_with_standardscaler(train_df, test_df, key: str):
+    reshaped_vec = train_df[key].values.reshape(-1, 1)
+    s = StandardScaler()
+    train_df.loc[:, key] = s.fit_transform(reshaped_vec)
+    test_df.loc[:, key] = s.transform(test_df[key].values.reshape(-1, 1))
+
 
 class Keyword(AbstructFeature):
     def create_features(self):
@@ -104,6 +110,7 @@ class QueryKeywordNum(AbstructFeature):
         self._test["Query_keyword_num"] = test["keyword"].apply(
             lambda x: len(x.split(" "))
         )
+        scale_with_standardscaler(self._train, self._test, "Query_keyword_num")
 
 
 class CountKeyword(AbstructFeature):
@@ -115,6 +122,7 @@ class CountKeyword(AbstructFeature):
         self._test["Count_keyword"] = test["keyword"].apply(
             lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_keyword")
 
 
 class RatioAnsKeyword(AbstructFeature):
@@ -215,6 +223,7 @@ class QueryNkeywordNum(AbstructFeature):
         self._test["Query_nkeyword_num"] = test["nkeyword"].apply(
             lambda x: len(x.split(" "))
         )
+        scale_with_standardscaler(self._train, self._test, "Query_nkeyword_num")
 
 
 class CountNkeyword(AbstructFeature):
@@ -226,12 +235,13 @@ class CountNkeyword(AbstructFeature):
 
     def create_features(self):
         count_keyword_dict = train["nkeyword"].value_counts().to_dict()
-        self._train["Count_keyword"] = train["nkeyword"].apply(
+        self._train["Count_nkeyword"] = train["nkeyword"].apply(
             lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
         )
-        self._test["Count_keyword"] = test["nkeyword"].apply(
+        self._test["Count_nkeyword"] = test["nkeyword"].apply(
             lambda x: count_keyword_dict[x] if x in count_keyword_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_nkeyword")
 
 
 class RatioAnsNkeyword(AbstructFeature):
@@ -274,18 +284,21 @@ class Prefecture(AbstructFeature):
         test["location"] = test.fillna({"location": "nan"})["location"]
         self._train["Prefecture"] = train["location"].apply(count_prefecture_name)
         self._test["Prefecture"] = test["location"].apply(count_prefecture_name)
+        scale_with_standardscaler(self._train, self._test, "Prefecture")
 
 
 class Region(AbstructFeature):
     def create_features(self):
         self._train["Region"] = train["location"].apply(count_region_name)
         self._test["Region"] = test["location"].apply(count_region_name)
+        scale_with_standardscaler(self._train, self._test, "Region")
 
 
 class Capital(AbstructFeature):
     def create_features(self):
         self._train["Capital"] = train["location"].apply(count_capital_name)
         self._test["Capital"] = test["location"].apply(count_capital_name)
+        scale_with_standardscaler(self._train, self._test, "Capital")
 
 
 class Lineng(AbstructFeature):
@@ -298,24 +311,28 @@ class Rprefecture(AbstructFeature):
     def create_features(self):
         self._train["Rprefecture"] = train["location"].apply(count_roma_prefecture_name)
         self._test["Rprefecture"] = test["location"].apply(count_roma_prefecture_name)
+        scale_with_standardscaler(self._train, self._test, "Rprefecture")
 
 
 class Rcapital(AbstructFeature):
     def create_features(self):
         self._train["Rcapital"] = train["location"].apply(count_roma_capital_name)
         self._test["Rcapital"] = test["location"].apply(count_roma_capital_name)
+        scale_with_standardscaler(self._train, self._test, "Rcapital")
 
 
 class Placeclues(AbstructFeature):
     def create_features(self):
         self._train["Placeclues"] = train["location"].apply(count_place_clues)
         self._test["Placeclues"] = test["location"].apply(count_place_clues)
+        scale_with_standardscaler(self._train, self._test, "Placeclues")
 
 
 class Japanclues(AbstructFeature):
     def create_features(self):
         self._train["Japanclues"] = train["location"].apply(count_japan_clues)
         self._test["Japanclues"] = test["location"].apply(count_japan_clues)
+        scale_with_standardscaler(self._train, self._test, "Japanclues")
 
 
 class Id(AbstructFeature):
@@ -333,9 +350,9 @@ class NormalizeId(AbstructFeature):
     """
 
     def create_features(self):
-        normalize_term = train.id.max()
-        self._train["Normalize_id"] = train.id / normalize_term
-        self._test["Normalize_id"] = test.id / normalize_term
+        self._train["Normalize_id"] = train.id
+        self._test["Normalize_id"] = test.id
+        scale_with_standardscaler(self._train, self._test, "Normalize_id")
 
 
 class Uniqid(AbstructFeature):
@@ -509,6 +526,7 @@ class CountId1(AbstructFeature):
         self._test["Count_id1"] = test["Id1"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id1")
 
 
 class CountId10(AbstructFeature):
@@ -526,6 +544,7 @@ class CountId10(AbstructFeature):
         self._test["Count_id10"] = test["Id10"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id10")
 
 
 class CountId100(AbstructFeature):
@@ -543,6 +562,7 @@ class CountId100(AbstructFeature):
         self._test["Count_id100"] = test["Id100"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id100")
 
 
 class CountId1000(AbstructFeature):
@@ -560,6 +580,7 @@ class CountId1000(AbstructFeature):
         self._test["Count_id1000"] = test["Id1000"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id1000")
 
 
 class CountId10000(AbstructFeature):
@@ -577,6 +598,7 @@ class CountId10000(AbstructFeature):
         self._test["Count_id10000"] = test["Id10000"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id10000")
 
 
 class CountId10_1(AbstructFeature):
@@ -594,6 +616,7 @@ class CountId10_1(AbstructFeature):
         self._test["Count_id10_1"] = test["Id10_1"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id10_1")
 
 
 class CountId100_10(AbstructFeature):
@@ -611,6 +634,7 @@ class CountId100_10(AbstructFeature):
         self._test["Count_id100_10"] = test["Id100_10"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id100_10")
 
 
 class CountId1000_100(AbstructFeature):
@@ -628,6 +652,7 @@ class CountId1000_100(AbstructFeature):
         self._test["Count_id1000_100"] = test["Id1000_100"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id1000_100")
 
 
 class CountId10000_1000(AbstructFeature):
@@ -645,12 +670,14 @@ class CountId10000_1000(AbstructFeature):
         self._test["Count_id10000_1000"] = test["Id10000_1000"].apply(
             lambda x: count_id_dict[x] if x in count_id_dict else 0
         )
+        scale_with_standardscaler(self._train, self._test, "Count_id10000_1000")
 
 
 class Reply(AbstructFeature):
     def create_features(self):
         self._train["Reply"] = train["text"].apply(count_reply)
         self._test["Reply"] = test["text"].apply(count_reply)
+        scale_with_standardscaler(self._train, self._test, "Reply")
         train["text"] = train["text"].apply(replace_reply)
         test["text"] = test["text"].apply(replace_reply)
 
@@ -659,6 +686,7 @@ class URL(AbstructFeature):
     def create_features(self):
         self._train["URL"] = train["text"].apply(count_url)
         self._test["URL"] = test["text"].apply(count_url)
+        scale_with_standardscaler(self._train, self._test, "URL")
         train["text"] = train["text"].replace(RESTRDIC["url"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["url"], "", regex=True)
 
@@ -667,6 +695,7 @@ class Hashtag(AbstructFeature):
     def create_features(self):
         self._train["Hashtag"] = train["text"].apply(count_hashtag)
         self._test["Hashtag"] = test["text"].apply(count_hashtag)
+        scale_with_standardscaler(self._train, self._test, "Hashtag")
         train["text"] = train["text"].replace(RESTRDIC["hashtag"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["hashtag"], "", regex=True)
 
@@ -675,6 +704,7 @@ class Kaomoji(AbstructFeature):
     def create_features(self):
         self._train["Kaomoji"] = train["text"].apply(count_kaomoji)
         self._test["Kaomoji"] = test["text"].apply(count_kaomoji)
+        scale_with_standardscaler(self._train, self._test, "Kaomoji")
         train["text"] = train["text"].replace(RESTRDIC["kaomoji"], "", regex=True)
         test["text"] = test["text"].replace(RESTRDIC["kaomoji"], "", regex=True)
 
@@ -683,6 +713,7 @@ class Emoji(AbstructFeature):
     def create_features(self):
         self._train["Emoji"] = train["text"].apply(count_emoji)
         self._test["Emoji"] = test["text"].apply(count_emoji)
+        scale_with_standardscaler(self._train, self._test, "Emoji")
         train["text"] = train["text"].apply(replace_emoji)
         test["text"] = test["text"].apply(replace_emoji)
 
@@ -691,14 +722,14 @@ class Number(AbstructFeature):
     def create_features(self):
         self._train["Number"] = train["text"].apply(count_number)
         self._test["Number"] = test["text"].apply(count_number)
-        train["text"] = train["text"].replace(RESTRDIC["number"], "0", regex=True)
-        test["text"] = test["text"].replace(RESTRDIC["number"], "0", regex=True)
+        scale_with_standardscaler(self._train, self._test, "Number")
 
 
 class Length(AbstructFeature):
     def create_features(self):
         self._train["Length"] = train["text"].apply(len)
         self._test["Length"] = test["text"].apply(len)
+        scale_with_standardscaler(self._train, self._test, "Length")
 
 
 class Punctuation(AbstructFeature):
@@ -706,8 +737,9 @@ class Punctuation(AbstructFeature):
     PUNCS = ["、", "，", ",", "。", "．", "."]
 
     def create_features(self):
-        self._train["Length"] = train["text"].apply(self.count_punc)
-        self._test["Length"] = test["text"].apply(self.count_punc)
+        self._train["Punctuation"] = train["text"].apply(self.count_punc)
+        self._test["Punctuation"] = test["text"].apply(self.count_punc)
+        scale_with_standardscaler(self._train, self._test, "Punctuation")
 
     @classmethod
     def count_punc(cls, text):
@@ -716,36 +748,40 @@ class Punctuation(AbstructFeature):
 
 class DateRepresentation(AbstructFeature):
     def create_features(self):
-        self._train["Length"] = train["text"].apply(count_date_representation)
-        self._test["Length"] = test["text"].apply(count_date_representation)
+        self._train["Date_representation"] = train["text"].apply(count_date_representation)
+        self._test["Date_representation"] = test["text"].apply(count_date_representation)
+        scale_with_standardscaler(self._train, self._test, "Date_representation")
 
 
 class Countexclamation(AbstructFeature):
     def create_features(self):
         self._train["Countexclamation"] = train["text"].apply(self.count_exclamation)
         self._test["Countexclamation"] = test["text"].apply(self.count_exclamation)
+        scale_with_standardscaler(self._train, self._test, "Countexclamation")
 
     @classmethod
     def count_exclamation(cls, text: str):
         text = neologdn.normalize(text)
-        return len(re.findall(r"!", text))
+        return len(re.findall(r"(!|！)", text))
 
 
 class Countquestion(AbstructFeature):
     def create_features(self):
         self._train["Countquestion"] = train["text"].apply(self.count_question)
         self._test["Countquestion"] = test["text"].apply(self.count_question)
+        scale_with_standardscaler(self._train, self._test, "Countquestion")
 
     @classmethod
     def count_question(cls, text: str):
         text = neologdn.normalize(text)
-        return len(re.findall(r"\?", text))
+        return len(re.findall(r"(\?|？)", text))
 
 
 class Countlaugh(AbstructFeature):
     def create_features(self):
         self._train["Countlaugh"] = train["text"].apply(self.count_laugh)
         self._test["Countlaugh"] = test["text"].apply(self.count_laugh)
+        scale_with_standardscaler(self._train, self._test, "Countlaugh")
 
     @classmethod
     def count_laugh(cls, text: str):
@@ -754,9 +790,14 @@ class Countlaugh(AbstructFeature):
 
 
 class Mecabbow(AbstructFeature):
+
+    ASCII_LOWERCASES = [c for c in "abcdefghijklmnopqrstuvwxyz"]
+
     def create_features(self):
         train["text"] = train["text"].apply(self.normalize)
         test["text"] = test["text"].apply(self.normalize)
+        train["text"] = train["text"].replace(RESTRDIC["number"], "0", regex=True)
+        test["text"] = test["text"].replace(RESTRDIC["number"], "0", regex=True)
         train["mecab_text"] = train["text"].apply(self.parse)
         test["mecab_text"] = test["text"].apply(self.parse)
         global corpus_bow
@@ -781,10 +822,9 @@ class Mecabbow(AbstructFeature):
         words = []
         while node.next:
             if (
-                True
-                # node.feature.split(",")[0] in ["名詞", "動詞", "形容詞", "副詞"]
-                # and len(node.surface) > 1
-                # and node.surface.lower() not in cls.ASCII_LOWERCASES
+                node.feature.split(",")[0] in ["名詞", "動詞", "形容詞", "副詞"]
+                and len(node.surface) > 1
+                and node.surface.lower() not in cls.ASCII_LOWERCASES
             ):
                 words.append(node.surface)
             node = node.next
@@ -792,14 +832,31 @@ class Mecabbow(AbstructFeature):
 
     @classmethod
     def normalize(cls, text):
-        text = re.sub(r"\u3000", " ", text)
+        text = cls.rm_spaces(text)
+        text = cls.clean_puncts(text)
         new_text = neologdn.normalize(text, repeat=1)
-        new_text = re.sub(r"[【】『』「」\[\]\(\)（）［］\|｜<>＜＞《》\"\\\/!\?]+", " ", new_text)
+        new_text = re.sub(r'[!-\/:-@[-`{-~]', " ", new_text)
         new_text = unicodedata.normalize("NFKC", new_text.lower())
-        table = str.maketrans("", "", string.punctuation + "「」、。・※")
-        new_text = new_text.translate(table)
+        new_text = re.sub(" +", " ", new_text)
         return new_text
 
+    @classmethod
+    def rm_spaces(cls, text):
+        spaces = ['\u200b', '\u200e', '\u202a', '\u2009', '\u2028', '\u202c', '\ufeff', '\uf0d8', '\u2061', '\u3000', '\x10', '\x7f', '\x9d', '\xad', '\x97', '\x9c', '\x8b', '\x81', '\x80', '\x8c', '\x85', '\x92', '\x88', '\x8d', '\x80', '\x8e', '\x9a', '\x94', '\xa0', '\x8f', '\x82', '\x8a', '\x93', '\x90', '\x83', '\x96', '\x9b', '\x9e', '\x99', '\x87', '\x84', '\x9f']
+        for space in spaces:
+            text = text.replace(space, ' ')
+        return text
+
+    @classmethod
+    def clean_puncts(cls, text):
+        puncts = puncts = [',', '.', '"', ':', ')', '(', '-', '!', '?', '|', ';', "'", '$', '&', '/', '[', ']', '>', '%', '=', '#', '*', '+', '\\', '•',  '~', '@', '£',
+ '·', '_', '{', '}', '©', '^', '®', '`',  '<', '→', '°', '€', '™', '›',  '♥', '←', '×', '§', '″', '′', 'Â', '█', '½', 'à', '…', '\n', '\xa0', '\t',
+ '“', '★', '”', '–', '●', 'â', '►', '−', '¢', '²', '¬', '░', '¶', '↑', '±', '¿', '▾', '═', '¦', '║', '―', '¥', '▓', '—', '‹', '─', '\u202f',
+ '▒', '：', '¼', '⊕', '▼', '▪', '†', '■', '’', '▀', '¨', '▄', '♫', '☆', 'é', '¯', '♦', '¤', '▲', 'è', '¸', '¾', 'Ã', '⋅', '‘', '∞', '«',
+ '∙', '）', '↓', '、', '│', '（', '»', '，', '♪', '╩', '╚', '³', '・', '╦', '╣', '╔', '╗', '▬', '❤', 'ï', 'Ø', '¹', '≤', '‡', '√', ]
+        for punct in puncts:
+            text = text.replace(punct, f' {punct} ')
+        return text
 
 class Mecabwordtfidf(AbstructFeature):
     def create_features(self):
@@ -1096,6 +1153,7 @@ class Mwordcount(AbstructFeature):
     def create_features(self):
         self._train["Mwordcount"] = train["text"].apply(self.word_count)
         self._test["Mwordcount"] = test["text"].apply(self.word_count)
+        scale_with_standardscaler(self._train, self._test, "Mwordcount")
 
     @classmethod
     def word_count(cls, text) -> int:
@@ -1121,6 +1179,7 @@ class Muniquecount(AbstructFeature):
     def create_features(self):
         self._train["Muniquecount"] = train["text"].apply(self.word_count)
         self._test["Muniquecount"] = test["text"].apply(self.word_count)
+        scale_with_standardscaler(self._train, self._test, "Muniquecount")
 
     @classmethod
     def word_count(cls, text) -> int:
@@ -1147,6 +1206,7 @@ class Mstopcount(AbstructFeature):
     def create_features(self):
         self._train["Mstopcount"] = train["text"].apply(self.word_count)
         self._test["Mstopcount"] = test["text"].apply(self.word_count)
+        scale_with_standardscaler(self._train, self._test, "Mstopcount")
 
     @classmethod
     def word_count(cls, text) -> int:
@@ -1263,6 +1323,78 @@ class Keywordtopic20(AbstructFeature):
     """
 
     DIMNUM = 20
+    key = f"Keywordtopic{DIMNUM}"
+
+    def create_features(self):
+        topic_texts_pairs = defaultdict(list)
+        for k in TOPIC_KEYWORDS.keys():
+            topic_texts_pairs[k] = train[train.topic_keyword == k].mecab_text.to_list()
+            topic_texts_pairs[k] += test[test.topic_keyword == k].mecab_text.to_list()
+        cv = CountVectorizer(min_df=0.04, stop_words=STOPWORDS)
+        lda = LDA(self.DIMNUM, random_state=RANDOM_STATE)
+        corpus = [" ".join(v) for k, v in topic_texts_pairs.items()]
+        cv.fit(corpus)
+        cvec = cv.transform(corpus)
+        lda.fit(cvec)
+        lda_vec = lda.transform(cvec)
+        str_lda_vec_list = []
+        for l in lda_vec.tolist():
+            str_lda_vec_list.append([str(val) for val in l])
+        for i, k in enumerate(TOPIC_KEYWORDS.keys()):
+            train.loc[
+                train.topic_keyword == k, self.key
+            ] = " ".join(str_lda_vec_list[i])
+            test.loc[
+                test.topic_keyword == k, self.key
+            ] = " ".join(str_lda_vec_list[i])
+        self._train[self.key] = train[self.key]
+        self._test[self.key] = test[self.key]
+
+
+class Keywordtopic50(AbstructFeature):
+    """keyword単位でツイート集合を作ってトピックモデリングからベクトルを取得
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    DIMNUM = 50
+    key = f"Keywordtopic{DIMNUM}"
+
+    def create_features(self):
+        topic_texts_pairs = defaultdict(list)
+        for k in TOPIC_KEYWORDS.keys():
+            topic_texts_pairs[k] = train[train.topic_keyword == k].mecab_text.to_list()
+            topic_texts_pairs[k] += test[test.topic_keyword == k].mecab_text.to_list()
+        cv = CountVectorizer(min_df=0.04, stop_words=STOPWORDS)
+        lda = LDA(self.DIMNUM, random_state=RANDOM_STATE)
+        corpus = [" ".join(v) for k, v in topic_texts_pairs.items()]
+        cv.fit(corpus)
+        cvec = cv.transform(corpus)
+        lda.fit(cvec)
+        lda_vec = lda.transform(cvec)
+        str_lda_vec_list = []
+        for l in lda_vec.tolist():
+            str_lda_vec_list.append([str(val) for val in l])
+        for i, k in enumerate(TOPIC_KEYWORDS.keys()):
+            train.loc[
+                train.topic_keyword == k, self.key
+            ] = " ".join(str_lda_vec_list[i])
+            test.loc[
+                test.topic_keyword == k, self.key
+            ] = " ".join(str_lda_vec_list[i])
+        self._train[self.key] = train[self.key]
+        self._test[self.key] = test[self.key]
+
+
+class Keywordtopic100(AbstructFeature):
+    """keyword単位でツイート集合を作ってトピックモデリングからベクトルを取得
+
+    Args:
+        AbstructFeature ([type]): [description]
+    """
+
+    DIMNUM = 100
     key = f"Keywordtopic{DIMNUM}"
 
     def create_features(self):
