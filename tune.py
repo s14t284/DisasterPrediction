@@ -48,9 +48,7 @@ logger.info(features)
 target_name = config["target_name"]
 
 logger.info("load datasets")
-X_train_all, X_test, dims = load_datasets(
-    features, config["dim_reduc"] if "dim_reduc" in config else True
-)
+X_train_all, X_test, dims = load_datasets(features)
 
 indexes = [
     f"{str_func(k)}{i}" if v > 1 else str_func(k)

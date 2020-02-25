@@ -128,7 +128,7 @@ class ModelSelector(object):
     def _get_xgb(self):
         model = XGBClassifier
         param_grids = {
-            "learning_rate": 0.05,
+            "learning_rate": [0.05, 0.1],
             "n_estimators": 100,
             "objective": "binary:logistic",
             "max_depth": [3, 10],
@@ -138,6 +138,8 @@ class ModelSelector(object):
             "max_delta_step": [1, 6],
             "subsample": [0.1 * value for value in range(5, 11)],
             "colsample_bytree": [0.1 * value for value in range(5, 11)],
+            "random_state": 0,
+            "tree_method": "gpu_hist"
         }
         return model, param_grids
 
