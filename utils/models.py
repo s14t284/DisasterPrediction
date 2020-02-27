@@ -139,7 +139,7 @@ class ModelSelector(object):
             "subsample": [0.1 * value for value in range(5, 11)],
             "colsample_bytree": [0.1 * value for value in range(5, 11)],
             "random_state": 0,
-            "tree_method": "gpu_hist"
+            "tree_method": "gpu_hist",
         }
         return model, param_grids
 

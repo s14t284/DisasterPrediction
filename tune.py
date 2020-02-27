@@ -124,18 +124,19 @@ _, y_pred, true_model = train_and_predict(
     X_train_all, X_test, y_train_all, params=params, model_name=config["model_name"]
 )
 
-importance = pd.DataFrame(
-    true_model.feature_importances_, index=indexes, columns=["importance"]
-)
-importance = importance.sort_values("importance", ascending=False)
-importance.head(50).plot.bar()
-plt.savefig("logs/tune_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
-plt.close()
-logger.info(importance)
-
 logger.info("save predicted result")
 sub = pd.DataFrame()
 sub[target_name] = y_pred
 sub.to_csv(
     "./data/output/tune_{0:%Y%m%d%H%M%S}_{1}.csv".format(now, best_score), index=False
 )
+
+if config["model_name"] in ["rf", "xgb", "lgbm"]:
+    importance = pd.DataFrame(
+        true_model.feature_importances_, index=indexes, columns=["importance"]
+    )
+    importance = importance.sort_values("importance", ascending=False)
+    importance.head(50).plot.bar()
+    plt.savefig("logs/tune_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
+    plt.close()
+    logger.info(importance)
