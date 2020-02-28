@@ -22,7 +22,8 @@ plt.rcParams["font.size"] = 5
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", default="./configs/default.json")
+parser.add_argument("-c", "--config", default=["./configs/default.json"])
+parser.add_argument("-v", "--voting", default=1, type=int)
 options = parser.parse_args()
 with open(options.config, "r") as f:
     config = json.load(f)
@@ -61,6 +62,7 @@ fmeasures = []
 y_preds = []
 
 params = config["params"]
+model_name = config["model_name"]
 
 kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
 
@@ -73,7 +75,8 @@ for train_idx, val_idx in tqdm(kf.split(X_train_all, y_train_all)):
         y_train,
         y_valid,
         params,
-        config["model_name"],
+        model_name,
+        options.voting,
     )
     fmeasures.append(f1)
     y_preds.append(y_pred)
@@ -86,17 +89,13 @@ logger.info(f1score)
 
 logger.info("training model for prediction test data...")
 _, y_pred, true_model = train_and_predict(
-    X_train_all, X_test, y_train_all, params=params, model_name=config["model_name"]
+    csr_matrix(X_train_all),
+    csr_matrix(X_test),
+    y_train_all,
+    params=params,
+    model_name=model_name,
+    voting=options.voting,
 )
-
-importance = pd.DataFrame(
-    true_model.feature_importances_, index=indexes, columns=["importance"]
-)
-importance = importance.sort_values("importance", ascending=False)
-importance.head(50).plot.bar()
-plt.savefig("logs/sub_{0:%Y%m%d%H%M%S}_feature_importance.png".format(now))
-plt.close()
-logger.info(importance)
 
 logger.info("save predicted result")
 sub = pd.DataFrame()
