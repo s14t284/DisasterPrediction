@@ -42,7 +42,7 @@ with open("./data/slothlib.txt") as f:
     STOPWORDS = [line.replace("\n", "") for line in f.readlines()]
 
 
-tagger = MeCab.Tagger("")
+tagger = MeCab.Tagger("-d /usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd")
 TOPIC_KEYWORDS = {}
 RANDOM_STATE = 0
 
@@ -72,6 +72,7 @@ def get_num_from_rank(i: int, rank: Union[int, List[int]]):
         else:
             return str(i)[rank[0]]
 
+
 def scale_with_standardscaler(train_df, test_df, key: str):
     reshaped_vec = train_df[key].values.reshape(-1, 1)
     s = StandardScaler()
@@ -86,9 +87,7 @@ class Keyword(AbstructFeature):
         test_keywords = test["keyword"].values.tolist()
         corpus = train_keywords + test_keywords
         CV.fit(corpus)
-        train_kbow = (
-            CV.transform(train_keywords).toarray().astype(np.float32)
-        )
+        train_kbow = CV.transform(train_keywords).toarray().astype(np.float32)
         train_kbow_list = train_kbow.tolist()
         self._train["Keyword"] = vec_to_vecstrs(train_kbow_list)
         test_kbow = CV.transform(test_keywords).toarray().astype(np.float32)
@@ -287,6 +286,13 @@ class Prefecture(AbstructFeature):
         scale_with_standardscaler(self._train, self._test, "Prefecture")
 
 
+class Prefectureintext(AbstructFeature):
+    def create_features(self):
+        self._train["Prefectureintext"] = train["text"].apply(count_prefecture_name)
+        self._test["Prefectureintext"] = test["text"].apply(count_prefecture_name)
+        scale_with_standardscaler(self._train, self._test, "Prefectureintext")
+
+
 class Region(AbstructFeature):
     def create_features(self):
         self._train["Region"] = train["location"].apply(count_region_name)
@@ -299,6 +305,13 @@ class Capital(AbstructFeature):
         self._train["Capital"] = train["location"].apply(count_capital_name)
         self._test["Capital"] = test["location"].apply(count_capital_name)
         scale_with_standardscaler(self._train, self._test, "Capital")
+
+
+class Capitalintext(AbstructFeature):
+    def create_features(self):
+        self._train["Capitalintext"] = train["text"].apply(count_capital_name)
+        self._test["Capitalintext"] = test["text"].apply(count_capital_name)
+        scale_with_standardscaler(self._train, self._test, "Capitalintext")
 
 
 class Lineng(AbstructFeature):
@@ -748,8 +761,12 @@ class Punctuation(AbstructFeature):
 
 class DateRepresentation(AbstructFeature):
     def create_features(self):
-        self._train["Date_representation"] = train["text"].apply(count_date_representation)
-        self._test["Date_representation"] = test["text"].apply(count_date_representation)
+        self._train["Date_representation"] = train["text"].apply(
+            count_date_representation
+        )
+        self._test["Date_representation"] = test["text"].apply(
+            count_date_representation
+        )
         scale_with_standardscaler(self._train, self._test, "Date_representation")
 
 
@@ -801,7 +818,9 @@ class Mecabbow(AbstructFeature):
         train["mecab_text"] = train["text"].apply(self.parse)
         test["mecab_text"] = test["text"].apply(self.parse)
         global corpus_bow
-        corpus_bow = np.concatenate([train["mecab_text"].values, test["mecab_text"].values])
+        corpus_bow = np.concatenate(
+            [train["mecab_text"].values, test["mecab_text"].values]
+        )
         CV = CountVectorizer(stop_words=STOPWORDS, max_features=10000)
         CV.fit(corpus_bow)
         global train_bow
@@ -835,28 +854,204 @@ class Mecabbow(AbstructFeature):
         text = cls.rm_spaces(text)
         text = cls.clean_puncts(text)
         new_text = neologdn.normalize(text, repeat=1)
-        new_text = re.sub(r'[!-\/:-@[-`{-~]', " ", new_text)
+        new_text = re.sub(r"[!-\/:-@[-`{-~]", " ", new_text)
         new_text = unicodedata.normalize("NFKC", new_text.lower())
         new_text = re.sub(" +", " ", new_text)
         return new_text
 
     @classmethod
     def rm_spaces(cls, text):
-        spaces = ['\u200b', '\u200e', '\u202a', '\u2009', '\u2028', '\u202c', '\ufeff', '\uf0d8', '\u2061', '\u3000', '\x10', '\x7f', '\x9d', '\xad', '\x97', '\x9c', '\x8b', '\x81', '\x80', '\x8c', '\x85', '\x92', '\x88', '\x8d', '\x80', '\x8e', '\x9a', '\x94', '\xa0', '\x8f', '\x82', '\x8a', '\x93', '\x90', '\x83', '\x96', '\x9b', '\x9e', '\x99', '\x87', '\x84', '\x9f']
+        spaces = [
+            "\u200b",
+            "\u200e",
+            "\u202a",
+            "\u2009",
+            "\u2028",
+            "\u202c",
+            "\ufeff",
+            "\uf0d8",
+            "\u2061",
+            "\u3000",
+            "\x10",
+            "\x7f",
+            "\x9d",
+            "\xad",
+            "\x97",
+            "\x9c",
+            "\x8b",
+            "\x81",
+            "\x80",
+            "\x8c",
+            "\x85",
+            "\x92",
+            "\x88",
+            "\x8d",
+            "\x80",
+            "\x8e",
+            "\x9a",
+            "\x94",
+            "\xa0",
+            "\x8f",
+            "\x82",
+            "\x8a",
+            "\x93",
+            "\x90",
+            "\x83",
+            "\x96",
+            "\x9b",
+            "\x9e",
+            "\x99",
+            "\x87",
+            "\x84",
+            "\x9f",
+        ]
         for space in spaces:
-            text = text.replace(space, ' ')
+            text = text.replace(space, " ")
         return text
 
     @classmethod
     def clean_puncts(cls, text):
-        puncts = puncts = [',', '.', '"', ':', ')', '(', '-', '!', '?', '|', ';', "'", '$', '&', '/', '[', ']', '>', '%', '=', '#', '*', '+', '\\', '•',  '~', '@', '£',
- '·', '_', '{', '}', '©', '^', '®', '`',  '<', '→', '°', '€', '™', '›',  '♥', '←', '×', '§', '″', '′', 'Â', '█', '½', 'à', '…', '\n', '\xa0', '\t',
- '“', '★', '”', '–', '●', 'â', '►', '−', '¢', '²', '¬', '░', '¶', '↑', '±', '¿', '▾', '═', '¦', '║', '―', '¥', '▓', '—', '‹', '─', '\u202f',
- '▒', '：', '¼', '⊕', '▼', '▪', '†', '■', '’', '▀', '¨', '▄', '♫', '☆', 'é', '¯', '♦', '¤', '▲', 'è', '¸', '¾', 'Ã', '⋅', '‘', '∞', '«',
- '∙', '）', '↓', '、', '│', '（', '»', '，', '♪', '╩', '╚', '³', '・', '╦', '╣', '╔', '╗', '▬', '❤', 'ï', 'Ø', '¹', '≤', '‡', '√', ]
+        puncts = puncts = [
+            ",",
+            ".",
+            '"',
+            ":",
+            ")",
+            "(",
+            "-",
+            "!",
+            "?",
+            "|",
+            ";",
+            "'",
+            "$",
+            "&",
+            "/",
+            "[",
+            "]",
+            ">",
+            "%",
+            "=",
+            "#",
+            "*",
+            "+",
+            "\\",
+            "•",
+            "~",
+            "@",
+            "£",
+            "·",
+            "_",
+            "{",
+            "}",
+            "©",
+            "^",
+            "®",
+            "`",
+            "<",
+            "→",
+            "°",
+            "€",
+            "™",
+            "›",
+            "♥",
+            "←",
+            "×",
+            "§",
+            "″",
+            "′",
+            "Â",
+            "█",
+            "½",
+            "à",
+            "…",
+            "\n",
+            "\xa0",
+            "\t",
+            "“",
+            "★",
+            "”",
+            "–",
+            "●",
+            "â",
+            "►",
+            "−",
+            "¢",
+            "²",
+            "¬",
+            "░",
+            "¶",
+            "↑",
+            "±",
+            "¿",
+            "▾",
+            "═",
+            "¦",
+            "║",
+            "―",
+            "¥",
+            "▓",
+            "—",
+            "‹",
+            "─",
+            "\u202f",
+            "▒",
+            "：",
+            "¼",
+            "⊕",
+            "▼",
+            "▪",
+            "†",
+            "■",
+            "’",
+            "▀",
+            "¨",
+            "▄",
+            "♫",
+            "☆",
+            "é",
+            "¯",
+            "♦",
+            "¤",
+            "▲",
+            "è",
+            "¸",
+            "¾",
+            "Ã",
+            "⋅",
+            "‘",
+            "∞",
+            "«",
+            "∙",
+            "）",
+            "↓",
+            "、",
+            "│",
+            "（",
+            "»",
+            "，",
+            "♪",
+            "╩",
+            "╚",
+            "³",
+            "・",
+            "╦",
+            "╣",
+            "╔",
+            "╗",
+            "▬",
+            "❤",
+            "ï",
+            "Ø",
+            "¹",
+            "≤",
+            "‡",
+            "√",
+        ]
         for punct in puncts:
-            text = text.replace(punct, f' {punct} ')
+            text = text.replace(punct, f" {punct} ")
         return text
+
 
 class Mecabwordtfidf(AbstructFeature):
     def create_features(self):
@@ -1269,12 +1464,10 @@ class Keywordtopic5(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            train.loc[
-                train.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
-            test.loc[
-                test.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
+            train.loc[train.topic_keyword == k, self.key] = " ".join(
+                str_lda_vec_list[i]
+            )
+            test.loc[test.topic_keyword == k, self.key] = " ".join(str_lda_vec_list[i])
         self._train[self.key] = train[self.key]
         self._test[self.key] = test[self.key]
 
@@ -1305,12 +1498,10 @@ class Keywordtopic10(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            train.loc[
-                train.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
-            test.loc[
-                test.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
+            train.loc[train.topic_keyword == k, self.key] = " ".join(
+                str_lda_vec_list[i]
+            )
+            test.loc[test.topic_keyword == k, self.key] = " ".join(str_lda_vec_list[i])
         self._train[self.key] = train[self.key]
         self._test[self.key] = test[self.key]
 
@@ -1341,12 +1532,10 @@ class Keywordtopic20(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            train.loc[
-                train.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
-            test.loc[
-                test.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
+            train.loc[train.topic_keyword == k, self.key] = " ".join(
+                str_lda_vec_list[i]
+            )
+            test.loc[test.topic_keyword == k, self.key] = " ".join(str_lda_vec_list[i])
         self._train[self.key] = train[self.key]
         self._test[self.key] = test[self.key]
 
@@ -1377,12 +1566,10 @@ class Keywordtopic50(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            train.loc[
-                train.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
-            test.loc[
-                test.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
+            train.loc[train.topic_keyword == k, self.key] = " ".join(
+                str_lda_vec_list[i]
+            )
+            test.loc[test.topic_keyword == k, self.key] = " ".join(str_lda_vec_list[i])
         self._train[self.key] = train[self.key]
         self._test[self.key] = test[self.key]
 
@@ -1413,12 +1600,10 @@ class Keywordtopic100(AbstructFeature):
         for l in lda_vec.tolist():
             str_lda_vec_list.append([str(val) for val in l])
         for i, k in enumerate(TOPIC_KEYWORDS.keys()):
-            train.loc[
-                train.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
-            test.loc[
-                test.topic_keyword == k, self.key
-            ] = " ".join(str_lda_vec_list[i])
+            train.loc[train.topic_keyword == k, self.key] = " ".join(
+                str_lda_vec_list[i]
+            )
+            test.loc[test.topic_keyword == k, self.key] = " ".join(str_lda_vec_list[i])
         self._train[self.key] = train[self.key]
         self._test[self.key] = test[self.key]
 

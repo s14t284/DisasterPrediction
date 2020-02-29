@@ -1,6 +1,9 @@
+from copy import deepcopy
+
 from lightgbm import LGBMClassifier
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
@@ -21,14 +24,29 @@ logger.setLevel(logging.INFO)
 
 
 def train_and_predict(
-    X_train, X_valid, y_train, y_valid=None, params=None, model_name=None
+    X_train, X_valid, y_train, y_valid=None, params=None, model_name=None, voting=1
 ):
 
-    logger.info(params)
-    model = ModelSelector.get_sklearn_model_instance(model_name)(**params)
+    if voting <= 1:
+        logger.info(params)
+        model = ModelSelector.get_sklearn_model_instance(model_name)(**params)
+    else:
+        # random_seed voting
+        estimators = []
+        logger.info(params)
+        for i in range(voting):
+            p = deepcopy(params)
+            p["random_state"] = i
+            estimators.append(
+                (
+                    model_name + str(i),
+                    ModelSelector.get_sklearn_model_instance(model_name)(**p),
+                )
+            )
+        model = VotingClassifier(estimators, n_jobs=-1)
+
     model.fit(X_train, y_train)
     y_pred = model.predict(X_valid)
-    # p, r, f1, _ = precision_recall_fscore_support(y_valid, y_pred, labels=[0, 1])
     if y_valid is not None:
         f1 = f1_score(y_valid, y_pred, labels=[0, 1], average="macro")
         classification_report(y_valid, y_pred)
